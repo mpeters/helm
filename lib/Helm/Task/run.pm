@@ -26,6 +26,7 @@ sub execute {
         $command = "sudo -u $sudo $command";
     }
 
+    warn "Running command ($command) on server $server\n";
     $ssh->system({tty => 1}, $command)
       || croak("Can't execute command ($command) on server $server: " . $ssh->error);
 }
