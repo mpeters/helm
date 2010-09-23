@@ -7,8 +7,8 @@ SYNOPSIS
         # patch the same file on all of the machines in your cluster 
         helm patch --file my_fix.patch --target /opt/cool_system/do_stuff.pl
 
-        # run a command on only the servers which run memcache and capture the results 
-        helm run --command "pidof memcached" --roles memcache --capture stdout
+        # run a command on only the servers which run memcache
+        helm run --command "pidof memcached" --roles memcache 
 
         # copy a file to ever server in your cluster
         helm put --local foo.tar.gz --remote /tmp/bar.tar.gz
@@ -35,8 +35,8 @@ DESCRIPTION
     *   Send notifications of each action performed to multiple channels:
         log file, irc, email, etc.
 
-    *   Capture (or ignore) output from tasks that is sent to either
-        "STDOUT" or "STDERR".
+    *   Interact with the remote processes via "STDIN", "STDOUT" and
+        "STDERR".
 
     *   Convenient .helmrc file to reduce the number of options you need to
         pass on every invocation of "helm".
@@ -103,15 +103,6 @@ OPTIONS
     --notify-level
         The notification level used. Can be one of "debug", "info", "warn",
         "error", "fatal". Defaults to "info".
-
-    --capture
-        Allows you to capture the output from the task being run. This
-        output is then shown (grouped by server) to the console after the
-        command is finished. This can be one of "stdin" or "stdout" and can
-        be specified multiple times:
-
-            --capture stdin 
-            --capture stdin --capture stdout
 
     --load
         Allows you to load other 3rd party plugin modules to extend "helm"

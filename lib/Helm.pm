@@ -31,12 +31,6 @@ has roles => (
     isa     => 'ArrayRef[Str]',
     default => sub { [] },
 );
-has captures => (
-    is      => 'ro',
-    writer  => '_captures',
-    isa     => 'ArrayRef[Str]',
-    default => sub { [] },
-);
 has notifies => (
     is      => 'ro',
     writer  => '_notifies',

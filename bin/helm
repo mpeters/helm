@@ -19,8 +19,8 @@ helm - Easy server and cluster automation
     # patch the same file on all of the machines in your cluster 
     helm patch --file my_fix.patch --target /opt/cool_system/do_stuff.pl
 
-    # run a command on only the servers which run memcache and capture the results 
-    helm run --command "pidof memcached" --roles memcache --capture stdout
+    # run a command on only the servers which run memcache
+    helm run --command "pidof memcached" --roles memcache 
 
     # copy a file to ever server in your cluster
     helm put --local foo.tar.gz --remote /tmp/bar.tar.gz
@@ -60,8 +60,7 @@ file, irc, email, etc.
 
 =item *
 
-Capture (or ignore) output from tasks that is sent to either C<STDOUT>
-or C<STDERR>.
+Interact with the remote processes via C<STDIN>, C<STDOUT> and C<STDERR>.
 
 =item *
 
@@ -80,7 +79,7 @@ of C<helm> aren't running at the same time.
 my $notify_level = 'info';
 my $sudo = '';
 my (
-    @servers, @roles, $config_uri, @notifies, @captures, @libs,
+    @servers, @roles, $config_uri, @notifies, @libs,
     $no_env,  $quiet, $man,        $help,     $version,  $dump_config
 );
 
@@ -110,7 +109,6 @@ GetOptions(
     'roles=s'                   => \@roles,
     'configuration|config=s'    => \$config_uri,
     'notify=s'                  => \@notifies,
-    'capture=s'                 => \@captures,
     'load=s'                    => \@libs,
     'sudo=s'                    => \$sudo,
     'noenv'                     => \$no_env,
@@ -188,7 +186,6 @@ try {
         extra_options => \%extra_options,
         servers       => \@servers,
         roles         => \@roles,
-        captures      => \@captures,
         notifies      => \@notifies,
         notify_level  => $notify_level,
         sudo          => $sudo,
@@ -266,16 +263,6 @@ is also passed.
 
 The notification level used. Can be one of C<debug>, C<info>, C<warn>,
 C<error>, C<fatal>.  Defaults to C<info>.
-
-=item --capture
-
-Allows you to capture the output from the task being run. This output
-is then shown (grouped by server) to the console after the command is
-finished. This can be one of C<stdin> or C<stdout> and can be specified
-multiple times:
-
-    --capture stdin 
-    --capture stdin --capture stdout
 
 =item --load
 
