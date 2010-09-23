@@ -53,10 +53,12 @@ tasks to target a single machine, multiple machines which share the
 same role, or all machines in your cluster. Can also be extended to pull
 configuration from more complicated sources like LDAP, etc.
 
-=item *
+=cut
 
-Send notifications of each action performed to multiple channels: log
-file, irc, email, etc.
+#=item *
+#
+#Send notifications of each action performed to multiple channels: log
+#file, irc, email, etc.
 
 =item *
 
@@ -243,26 +245,28 @@ L<CONFIGURATION>).
 
     --config file:///etc/helm.conf
 
-=item --notify
+=cut
 
-Send notifications to a specific channel. Multiple channels can be
-specified by specifying this option multiple times. The value of this
-option is the URI of the channel to be used.  See L<NOTIFICATION CHANNELS>
-for more details.
-
-    # send notifications to a comany tech IRC channel 
-    --notify irc://irc.company.com/tech
-
-    # send notifications to a log file and to email 
-    --notify file:///var/log/helm.log --notify mailto://notifications@company.com
-
-Notifications are also sent to C<STDERR> unless the L<--quite> option
-is also passed.
-
-=item --notify-level
-
-The notification level used. Can be one of C<debug>, C<info>, C<warn>,
-C<error>, C<fatal>.  Defaults to C<info>.
+#=item --notify
+#
+#Send notifications to a specific channel. Multiple channels can be
+#specified by specifying this option multiple times. The value of this
+#option is the URI of the channel to be used.  See L<NOTIFICATION CHANNELS>
+#for more details.
+#
+#    # send notifications to a comany tech IRC channel 
+#    --notify irc://irc.company.com/tech
+#
+#    # send notifications to a log file and to email 
+#    --notify file:///var/log/helm.log --notify mailto://notifications@company.com
+#
+#Notifications are also sent to C<STDERR> unless the L<--quite> option
+#is also passed.
+#
+#=item --notify-level
+#
+#The notification level used. Can be one of C<debug>, C<info>, C<warn>,
+#C<error>, C<fatal>.  Defaults to C<info>.
 
 =item --load
 
@@ -276,6 +280,15 @@ module name of the plugin. This can be specified multiple times.
 
     # load hypothetical custom LDAP configuration and Ruby execution plugins 
     --load Helm::Conf::Loader::CompanyLDAP --load Helm::Conf::Task::Execute::Ruby
+
+=item --sudo
+
+The user that should be used to perform the commands on the remote server.
+The actually SSH connection will be made using the current user's SSH keys
+but then once the connection is made to the remote server, it's sometimes
+useful for the commands to be run as a different user. We also try to make
+sure that things like file permissions (on tasks like C<put> and C<patch>)
+are also handled so that the resulting files are owned by this sudo user.
 
 =item --noenv
 

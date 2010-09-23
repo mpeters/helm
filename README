@@ -32,9 +32,6 @@ DESCRIPTION
         same role, or all machines in your cluster. Can also be extended to
         pull configuration from more complicated sources like LDAP, etc.
 
-    *   Send notifications of each action performed to multiple channels:
-        log file, irc, email, etc.
-
     *   Interact with the remote processes via "STDIN", "STDOUT" and
         "STDERR".
 
@@ -85,25 +82,6 @@ OPTIONS
 
             --config file:///etc/helm.conf
 
-    --notify
-        Send notifications to a specific channel. Multiple channels can be
-        specified by specifying this option multiple times. The value of
-        this option is the URI of the channel to be used. See "NOTIFICATION
-        CHANNELS" for more details.
-
-            # send notifications to a comany tech IRC channel 
-            --notify irc://irc.company.com/tech
-
-            # send notifications to a log file and to email 
-            --notify file:///var/log/helm.log --notify mailto://notifications@company.com
-
-        Notifications are also sent to "STDERR" unless the --quite option is
-        also passed.
-
-    --notify-level
-        The notification level used. Can be one of "debug", "info", "warn",
-        "error", "fatal". Defaults to "info".
-
     --load
         Allows you to load other 3rd party plugin modules to extend "helm"
         functionality. This could be to add more notification channels,
@@ -116,6 +94,15 @@ OPTIONS
 
             # load hypothetical custom LDAP configuration and Ruby execution plugins 
             --load Helm::Conf::Loader::CompanyLDAP --load Helm::Conf::Task::Execute::Ruby
+
+    --sudo
+        The user that should be used to perform the commands on the remote
+        server. The actually SSH connection will be made using the current
+        user's SSH keys but then once the connection is made to the remote
+        server, it's sometimes useful for the commands to be run as a
+        different user. We also try to make sure that things like file
+        permissions (on tasks like "put" and "patch") are also handled so
+        that the resulting files are owned by this sudo user.
 
     --noenv
         Suppress the default loading of the ".helmrc file" file.
