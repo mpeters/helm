@@ -46,7 +46,7 @@ sub execute {
           || croak("Can't execute command ($cmd) on server $server: " . $ssh->error);
 
         # move the file over to the correct location
-        my $cmd = "sudo mv $dest $remote";
+        $cmd = "sudo mv $dest $remote";
         $ssh->system($cmd)
           || croak("Can't execute command ($cmd) on server $server: " . $ssh->error);
     }
