@@ -135,6 +135,13 @@ if(@libs) {
     }
 }
 
+# split servers and roles on commas if specified together
+if(@servers) {
+    @servers = map { split(/\s*,\s*/, $_) } @servers;
+}
+if(@roles) {
+    @roles = map { split(/\s*,\s*/, $_) } @roles;
+}
 
 # look through @ARGV and get anything that looks like an option (starts with "--")
 # and save it to pass through the actual task
@@ -178,7 +185,6 @@ if( $dump_config ) {
     # don't bother with anything else if we don't have a task
     exit(0) if !$task;
 }
-
 
 die "No task given\n" if !$task;
 try {
