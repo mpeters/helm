@@ -18,7 +18,7 @@ sub expand_server_name {
     my $name_length = length $name;
     my $match;
     foreach my $server (@{$self->servers}) {
-        if (length($server->name_length) >= $name_length) {
+        if ($server->name_length >= $name_length) {
             if (substr($server->name, 0, $name_length) eq $name) {
                 if (!$match || $name eq $server->name) {
                     $match = $server->name;
