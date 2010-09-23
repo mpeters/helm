@@ -16,16 +16,17 @@ helm - Easy server and cluster automation
 
     helm TASK [OPTIONS]
 
-    # patch the same file on all of the machines in your cluster master]$
+    # patch the same file on all of the machines in your cluster 
     helm patch --file my_fix.patch --target /opt/cool_system/do_stuff.pl
 
-    # restart apache on specific servers (in series) and send
-    # notifications to IRC
-    master]$ helm apache.restart --servers web1,web2,web3 --series --notify irc://irc.company.com/operations
+    # run a command on only the servers which run memcache and capture the results 
+    helm run --command "pidof memcached" --roles memcache --capture stdout
 
-    # run a command on only the servers which run memcache and capture
-    # the results 
-    master]$ helm run --command "pidof memcached" --roles memcache --capture stdout
+    # copy a file to ever server in your cluster
+    helm put --local foo.tar.gz --remote /tmp/bar.tar.gz
+
+    # rsync a local folder to specific servers
+    helm rsync_put --local lib/important --remote /tmp/important_libs --servers web1,web2,web4
 
 =head1 DESCRIPTION
 
@@ -77,9 +78,10 @@ of C<helm> aren't running at the same time.
 =cut
 
 my $notify_level = 'info';
+my $sudo = '';
 my (
-    @servers, @roles, $config_uri, @notifies, @captures, @libs, $no_env,
-    $sudo,    $quiet, $man,        $help,     $version,  $dump_config
+    @servers, @roles, $config_uri, @notifies, @captures, @libs,
+    $no_env,  $quiet, $man,        $help,     $version,  $dump_config
 );
 
 # the main task (make sure not to grab an option by mistake)
