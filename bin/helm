@@ -1,0 +1,454 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use Getopt::Long;
+use Pod::Usage;
+use Helm;
+use Try::Tiny;
+use Cwd qw(abs_path);
+use File::Spec::Functions qw(catfile);
+
+=head1 NAME
+
+helm - Easy server and cluster automation
+
+=head1 SYNOPSIS
+
+    helm TASK [OPTIONS]
+
+    # patch the same file on all of the machines in your cluster master]$
+    helm patch --file my_fix.patch --target /opt/cool_system/do_stuff.pl
+
+    # restart apache on specific servers (in series) and send
+    # notifications to IRC
+    master]$ helm apache.restart --servers web1,web2,web3 --series --notify irc://irc.company.com/operations
+
+    # run a command on only the servers which run memcache and capture
+    # the results 
+    master]$ helm run --command "pidof memcached" --roles memcache --capture stdout
+
+=head1 DESCRIPTION
+
+C<helm> is command-line utility to make it easy to automate system tasks
+for individual machines, a cluster of machines or a subset of machines
+in a cluster. It has the following features:
+
+=over
+
+=item *
+
+Combine multiple commands into a single tasks and to have groups of
+related tasks gathered together.
+
+=item *
+
+Uses SSH as the transport layer for tasks and uses SSH keys for automatic
+authorization.
+
+=item *
+
+Simple optional configuration file describing your cluster, allowing
+tasks to target a single machine, multiple machines which share the
+same role, or all machines in your cluster. Can also be extended to pull
+configuration from more complicated sources like LDAP, etc.
+
+=item *
+
+Send notifications of each action performed to multiple channels: log
+file, irc, email, etc.
+
+=item *
+
+Capture (or ignore) output from tasks that is sent to either C<STDOUT>
+or C<STDERR>.
+
+=item *
+
+Convenient F<.helmrc> file to reduce the number of options you need to
+pass on every invocation of C<helm>.
+
+=item *
+
+Default locking on the client and server so that multiple invocations
+of C<helm> aren't running at the same time.
+
+=back
+
+=cut
+
+my $notify_level = 'info';
+my (
+    @servers, @roles, $config_uri, @notifies, @captures, @libs, $no_env,
+    $sudo,    $quiet, $man,        $help,     $version,  $dump_config
+);
+
+# the main task (make sure not to grab an option by mistake)
+my $task = defined $ARGV[0] && $ARGV[0] !~ /^-/ ? shift @ARGV : undef;
+
+# load the .helmrc file unless we have the --noenv set
+unless (grep { $_ eq '--noenv' } @ARGV) {
+    my $file = $ENV{HELMRC};
+    # look in the current directory
+    unless ($file && -e $file) {
+        $file = catfile(abs_path, '.helmrc');
+        undef $file unless -e $file;
+    }
+
+    if ($file) {
+        open(my $FH, '<', $file) or die "Can't read $file: $!\n";
+        my @lines = grep { /\S/ && !/^\s*#/ } <$FH>;
+        chomp @lines;
+        unshift(@ARGV, map { split(/\s+/, $_) } @lines);
+    }
+}
+
+Getopt::Long::Configure('pass_through');
+GetOptions(
+    'servers=s'                 => \@servers,
+    'roles=s'                   => \@roles,
+    'configuration|config=s'    => \$config_uri,
+    'notify=s'                  => \@notifies,
+    'capture=s'                 => \@captures,
+    'load=s'                    => \@libs,
+    'sudo=s'                    => \$sudo,
+    'noenv'                     => \$no_env,
+    'quiet'                     => \$quiet,
+    'man'                       => \$man,
+    'h|help'                    => \$help,
+    'v|version'                 => \$version,
+    'dump-config|dump_config'   => \$dump_config,
+) or pod2usage(2);
+pod2usage(1) if $help;
+pod2usage(-verbose => 2) if $man;
+
+if( $version ) {
+    print "$Helm::VERSION\n";
+    exit(0);
+}
+
+if(@libs) {
+    foreach my $lib (@libs) {
+        eval "require $lib";
+        die "Could not load library $lib: $@\n" if $@;
+    }
+}
+
+
+# look through @ARGV and get anything that looks like an option (starts with "--")
+# and save it to pass through the actual task
+my %extra_options;
+for(my $i=0; $i<=$#ARGV; $i++) {
+    my $option = $ARGV[$i];
+    if( $option =~ /^-+(.*)/ ) {
+        $option = $1;
+        my $val = $ARGV[$i+1];
+        if( ! defined $val || $val =~ /^-/ ) {
+            $extra_options{$option} = 1;
+        } else {
+            $extra_options{$option} = $val;
+            $i++;
+        }
+    }
+}
+
+if( $dump_config ) {
+    my $main_header = "=" x 70;
+    my $section_header = '-' x 50;
+    if( %extra_options ) {
+        warn "$main_header\nEXTRA OPTIONS\n$main_header\n";
+        foreach my $key (sort keys %extra_options) {
+            print "  $key -> $extra_options{$key}\n";
+        }
+    }
+        
+    die "Can't dump configuration without a --config option\n" unless $config_uri;
+    my $config = try {
+        Helm->load_configuration($config_uri);
+    } catch {
+        warn "Error: $_\n";
+        exit(1);
+    };
+    warn "$main_header\nSERVERS\n$main_header\n";
+    foreach my $server (@{$config->servers}) {
+        warn "  " . $server->name() . "\n  Roles: " . join(', ', @{$server->roles}) . "\n$section_header\n";
+    }
+
+    # don't bother with anything else if we don't have a task
+    exit(0) if !$task;
+}
+
+
+die "No task given\n" if !$task;
+try {
+    my $helm = Helm->new(
+        task       => $task       || '',
+        config_uri => $config_uri || '',
+        extra_options => \%extra_options,
+        servers       => \@servers,
+        roles         => \@roles,
+        captures      => \@captures,
+        notifies      => \@notifies,
+        notify_level  => $notify_level,
+        sudo          => $sudo,
+    );
+    $helm->steer();
+} catch {
+    my $err = $_;
+    die "Error: $err\n";
+}
+
+=head1 OPTIONS
+
+C<helm> has several options that can be specified for all commands. Any
+remaining arguments are passed to the task that was invoked. These global
+options are:
+
+=over
+
+=item --servers
+
+Specifically list out the hostnames of the servers to send the task
+to. These can either be full hostnames (or an unambiguous abbreviation
+of your servers as defined in your L<CONFIGURATION>). Multiple hostnames
+must me specified in a comma separated list.
+
+If no servers (or roles) are specified, then the task will be performed
+on all servers (as defined in your L<CONFIGURATION>).
+
+    # using full hostnames 
+    --servers 192.168.0.23,192.168.0.24,web1.company.com
+
+    # using abbreviations from config file 
+    --servers web1,web2,web3
+
+=item --roles
+
+Instead of specifying the servers explicitly, you can instead
+specify which server roles you want to target (as defined in your
+L<CONFIGURATION>). Multiple roles must be specified in a comma separated
+list.
+
+If no roles (or servers) are specified, then the task will be performed
+on all servers (as defined in your L<CONFIGURATION>).
+
+    # single role 
+    --roles web
+
+    # multiple roles
+    --roles web,cache
+
+=item --config
+
+Which resource to use for pulling cluster configuration information (see
+L<CONFIGURATION>).
+
+    --config file:///etc/helm.conf
+
+=item --notify
+
+Send notifications to a specific channel. Multiple channels can be
+specified by specifying this option multiple times. The value of this
+option is the URI of the channel to be used.  See L<NOTIFICATION CHANNELS>
+for more details.
+
+    # send notifications to a comany tech IRC channel 
+    --notify irc://irc.company.com/tech
+
+    # send notifications to a log file and to email 
+    --notify file:///var/log/helm.log --notify mailto://notifications@company.com
+
+Notifications are also sent to C<STDERR> unless the L<--quite> option
+is also passed.
+
+=item --notify-level
+
+The notification level used. Can be one of C<debug>, C<info>, C<warn>,
+C<error>, C<fatal>.  Defaults to C<info>.
+
+=item --capture
+
+Allows you to capture the output from the task being run. This output
+is then shown (grouped by server) to the console after the command is
+finished. This can be one of C<stdin> or C<stdout> and can be specified
+multiple times:
+
+    --capture stdin 
+    --capture stdin --capture stdout
+
+=item --load
+
+Allows you to load other 3rd party plugin modules to extend C<helm>
+functionality. This could be to add more notification channels, different
+configuration loading, etc. The value of this option is the full Perl
+module name of the plugin. This can be specified multiple times.
+
+    # load a hypothetical Twitter notification plugin 
+    --load Helm::Notify::Twitter
+
+    # load hypothetical custom LDAP configuration and Ruby execution plugins 
+    --load Helm::Conf::Loader::CompanyLDAP --load Helm::Conf::Task::Execute::Ruby
+
+=item --noenv
+
+Suppress the default loading of the L<".helmrc file"|THE .helmrc FILE>
+file.
+
+=item --quiet
+
+Suppress the default notification to C<STDERR>
+
+=item --help
+
+Display the synopsis
+
+=item --man
+
+Display this documentation
+
+=item --version
+
+Display the version of Helm installed
+
+=item --dump-config
+
+Display a dump of the configuration data as understood by Helm
+
+=back
+
+=cut
+
+# TODO - other options: port, timeout, parallel, compare (compare outputs)
+
+=head1 TASKS
+
+=head1 CONFIGURATION
+
+By default, C<helm> doesn't use a configuration file, but certain features
+require it (using roles, server abbreviations, etc) so it's best to
+have one. You can tell C<helm> which configuration resource to use by using
+the L<--config> option. Currently, only the C<file://> URI scheme
+is supported.  
+
+    --config file:///etc/helm.conf
+
+A configuration file will look something like this:
+
+    <Server web[1-5].company.com>
+        Role web
+    </Server>
+
+    <Server db1.company.com>
+        Role db Role db_master
+    </Server>
+
+    <Server db2.company.com>
+        Role db Role db_slave
+    </Server>
+
+This configuration would define 7 servers (web1.company.com,
+web2.company.com, web3.company.com, web4.company.com, web5.company.com,
+db1.company.com and db2.company.com). It defines 4 different roles (web,
+db, db_master, db_slave).
+
+C<helm> currently just supports a single configuration resource format
+(C<file://>), but the internals are flexible enough that more formats
+could be supported in the future, including other configuration methods
+like LDAP, etc.
+
+If, for instance you wanted to support a URI like:
+
+    --config ldap://ldap.company.com
+
+You would need to write a Perl module named C<Helm::Conf::Loader::ldap>
+which subclasses C<Helm::Conf::Loader>.
+
+If you are having problems getting your configuration right, you can pass
+the L<--dump-config> option to tell C<helm> to display what it thinks things
+are configured to be.
+
+=head1 NOTIFICATION CHANNELS
+
+C<helm> can be told to send various levels of notification data to
+different channels. By default we support a log file, IRC and email
+notifications. We also support various notification levels (see the
+L<--notify-level> option).
+
+You can specify which channel is used by giving a URI which indicates
+what type of channel and where to send the notification. The following
+URI schemes are supported:
+
+=over
+
+=item file://
+
+This is basically a log file where notifications are immediately appended.
+
+    --notify file:///var/log/helm.log
+
+=item irc://
+
+This is an IRC channel where notifications are immediately sent. For
+instance to send notifications to the C<sysadmin> IRC channel on
+C<irc.company.com> using the user C<michael> and the password C<s3cr3t>
+you would have:
+
+    --notify irc://michael@irc.company.com/sysadmin?pass=s3cr3t
+
+=item mailto://
+
+Similar to Mail-To links in HTML documents, this just specifies an
+email address to notify. Notification's aren't sent immediately, but
+are instead queued up to be sent once the command has been completed.
+
+    --notify mailto://michael@company.com
+
+=back
+
+Plugins can be written to load allow other notification channels. This
+is done by subclassing L<Helm::Notify::Channel> and naming the module
+with the scheme of the URI. So to add another channel for a URI like
+
+    --notify twitter://m_peters
+
+You'd need to create a module named C<Helm::Notify::twitter>.
+
+=head1 THE .helmrc FILE
+
+The F<.helmrc> file contains command-line options that are prepended
+to the command line before processing. Multiple options may live on
+multiple lines. Lines beginning with a # are ignored. A F<.helmrc>
+might look like this:
+
+    # always log to a file 
+    --notify file:///var/log/helm.log
+
+    # always load our custom plugins 
+    --load Helm::Conf::Loader::CompanyLDAP 
+    --load Helm::Notify::CompanyYammer
+    --load Company::CustomHelmTasks
+
+C<helm> looks in your home directory or the current directory for
+the F<.helmrc>. You can specify another location with the C<HELMRC>
+environment variable.
+
+If L<--noenv> is specified on the command line, the F<.helmrc> file
+is ignored.
+
+=head1 CAVEATS
+
+=over 
+
+=item Multi-Platform
+
+This has been developed and tested on Linux only. Dealing with multiple
+platforms and writing multi-platform tasks has been punted to the future.
+
+=item Alpha Software
+
+This software is very ALPHA, which means it's interface is likely to
+change in the future.  It's used currently and happily in production
+but please be aware if you start using it that you'll probably want to
+follow future versions carefully to make sure you aren't bitten by API
+changes as thing are flushed out.
+
+=back
