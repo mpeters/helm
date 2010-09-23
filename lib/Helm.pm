@@ -113,13 +113,17 @@ sub steer {
         $ssh_connections{$server} = $ssh;
     }
 
-    my $header = '=' x 70;
-    foreach my $server (@servers) {
-        warn "$header\n$server\n$header\n";
+    my $fat_line = '=' x 70;
+    my $thin_line = '-' x 70;
+    foreach my $i (0..$#servers) {
+        my $server = $servers[$i];
+        warn "$server\n$fat_line\n";
         $task_obj->execute(
             ssh    => $ssh_connections{$server},
             server => $server,
         );
+        warn "$thin_line\n";
+        warn "\n" unless $i == $#servers;
     }
 }
 
