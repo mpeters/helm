@@ -55,8 +55,9 @@ sub BUILD {
     # if we have servers, let's fully expand their names in case we're using abbreviations
     my @servers = @{$self->servers};
     if(@servers) {
-        my $config = $self->config;
-        $self->_servers([map { $config->expand_server_name($_) } @servers]);
+        if( my $config = $self->config ) {
+            $self->_servers([map { $config->expand_server_name($_) } @servers]);
+        }
     }
 
     # if we have any roles, then get the servers with those roles
