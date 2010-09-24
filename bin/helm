@@ -338,8 +338,6 @@ Display a dump of the configuration data as understood by Helm
 
 =cut
 
-# TODO - other options: port, timeout, parallel, compare (compare outputs)
-
 =head1 TASKS
 
 =head1 CONFIGURATION
@@ -461,8 +459,9 @@ is ignored.
 
 =item Multi-Platform
 
-This has been developed and tested on Linux only. Dealing with multiple
-platforms and writing multi-platform tasks has been punted to the future.
+This has been developed and tested on Linux (with bash as the shell
+on the remote hosts) only. Dealing with multiple platforms and writing
+multi-platform tasks has been punted to the future.
 
 =item Alpha Software
 

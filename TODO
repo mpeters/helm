@@ -1,0 +1,13 @@
+Several things I'd like to do:
+
++ Actual loading and registration of configuration, notification and task modules
+    rather than just relying on loading things in the Helm::* namespace
+
++ --parallel flag so things can be done in parallel
+
++ --port option
+
++ --timeout option
+
++ --compare option to compare outputs from the different servers
+    in an intelligent manner

@@ -95,7 +95,6 @@ sub steer {
     my $task_class = "Helm::Task::$task";
     eval "require $task_class";
 
-    # TODO - different exception if we can't find the module vs can't compile it
     if( $@ ) {
         if( $@ =~ /Can't locate Helm\/Task\/$task.pm/ ) {
             croak("Unknown task $task");
@@ -160,6 +159,7 @@ sub load_configuration {
 
     # try to load the right config module
     my $scheme = $uri->scheme;
+    croak("Unknown config type for $uri") unless $scheme;
     my $loader_class  = "Helm::Conf::Loader::$scheme";
     eval "require $loader_class";
     croak("Unknown config type: $scheme. Couldn't load $loader_class: $@") if $@;
