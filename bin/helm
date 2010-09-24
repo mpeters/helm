@@ -71,7 +71,7 @@ pass on every invocation of C<helm>.
 
 =item *
 
-Default locking on the client and server so that multiple invocations
+Locking on the client and/or server so that multiple invocations
 of C<helm> aren't running at the same time.
 
 =back
@@ -79,10 +79,12 @@ of C<helm> aren't running at the same time.
 =cut
 
 my $notify_level = 'info';
+my $lock_type    = 'none';
 my $sudo = '';
+my $sleep = 0;
 my (
-    @servers, @roles, $config_uri, @notifies, @libs,
-    $no_env,  $quiet, $man,        $help,     $version,  $dump_config
+    @servers, @roles, $config_uri, @notifies, @libs, $no_env,
+    $quiet,   $man,   $help,       $version,  $dump_config,
 );
 
 # the main task (make sure not to grab an option by mistake)
@@ -113,6 +115,8 @@ GetOptions(
     'notify=s'                  => \@notifies,
     'load=s'                    => \@libs,
     'sudo=s'                    => \$sudo,
+    'lock=s'                    => \$lock_type,
+    'sleep=i'                   => \$sleep,
     'noenv'                     => \$no_env,
     'quiet'                     => \$quiet,
     'man'                       => \$man,
@@ -197,11 +201,14 @@ try {
         notifies      => \@notifies,
         notify_level  => $notify_level,
         sudo          => $sudo,
+        lock_type     => $lock_type,
+        sleep         => $sleep,
     );
     $helm->steer();
 } catch {
     my $err = $_;
-    die "Error: $err\n";
+    $err =~ s/at (\S)+ line \d+$//;
+    die "Error: $err";
 }
 
 =head1 OPTIONS
@@ -295,6 +302,12 @@ but then once the connection is made to the remote server, it's sometimes
 useful for the commands to be run as a different user. We also try to make
 sure that things like file permissions (on tasks like C<put> and C<patch>)
 are also handled so that the resulting files are owned by this sudo user.
+
+=item --lock
+
+This options allows you to have control over whether concurrent C<helm> processes
+can be running on either the local or remote servers. The value can be one of: C<none>,
+C<local>, C<remote>, C<both>.
 
 =item --noenv
 

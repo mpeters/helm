@@ -17,6 +17,7 @@ my $build = Module::Build->new(
         'Cwd'                   => '3.33',
         'Data::UUID'            => '1.217',
         'Carp'                  => '0',
+        'Fcntl'                 => '0',
     },
     recommends         => {},
     build_requires     => {},
