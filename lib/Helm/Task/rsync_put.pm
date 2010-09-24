@@ -4,7 +4,6 @@ use warnings;
 use Moose;
 use Net::OpenSSH;
 use Data::UUID;
-use Carp qw(croak);
 
 extends 'Helm::Task';
 
@@ -15,9 +14,9 @@ sub validate {
 
     # make sure we have local and remote options and that the local file exists and is readable
     my $local = $extra_options->{local};
-    croak('Missing option: local')  unless $local;
-    croak('Missing option: remote') unless $extra_options->{remote};
-    croak("Invalid option: local - Directory \"$local\" does not exist") unless -d $local;
+    $helm->die('Missing option: local')  unless $local;
+    $helm->die('Missing option: remote') unless $extra_options->{remote};
+    $helm->die("Invalid option: local - Directory \"$local\" does not exist") unless -d $local;
 }
 
 sub execute {
@@ -30,8 +29,8 @@ sub execute {
 
     # send our file over there
     $ssh->rsync_put({archive => 1}, $local, $remote)
-      || croak("Can't rsync directory ($local) to server $server: " . $ssh->error);
-    warn "Directory $local rsync'ed to $server:$remote\n";
+      || $helm->die("Can't rsync directory ($local) to server $server: " . $ssh->error);
+    $helm->notify->info("Directory $local rsync'ed to $server:$remote");
 }
 
 __PACKAGE__->meta->make_immutable;

@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use Moose;
 use Net::OpenSSH;
-use Carp qw(croak);
 
 extends 'Helm::Task';
 
@@ -12,7 +11,7 @@ sub validate {
     my $helm          = $self->helm;
     my $extra_options = $helm->extra_options;
 
-    croak('Missing option: command') unless $extra_options->{command};
+    $helm->die('Missing option: command') unless $extra_options->{command};
 }
 
 sub execute {
@@ -26,9 +25,9 @@ sub execute {
         $command = "sudo -u $sudo $command";
     }
 
-    warn "Running command ($command) on server $server\n";
+    $helm->notify->info("Running command ($command) on server $server");
     $ssh->system({tty => 1}, $command)
-      || croak("Can't execute command ($command) on server $server: " . $ssh->error);
+      || $helm->die("Can't execute command ($command) on server $server: " . $ssh->error);
 }
 
 __PACKAGE__->meta->make_immutable;

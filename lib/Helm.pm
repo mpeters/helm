@@ -9,23 +9,26 @@ use Try::Tiny;
 use File::Spec::Functions qw(catdir catfile tmpdir);
 use File::HomeDir;
 use Net::OpenSSH;
-use Carp qw(croak);
 use Fcntl qw(:flock);
 use File::Basename qw(basename);
+use Carp qw(croak);
+use Helm::Notify;
 
 our $VERION = 0.1;
 
-enum NOTIFY_LEVEL => qw(debug info warn error fatal);
+enum NOTIFY_LEVEL => qw(debug info warn error);
 enum LOCK_TYPE    => qw(none local remote both);
-has task              => (is => 'ro', writer => '_task',              required => 1);
-has extra_options     => (is => 'ro', isa    => 'HashRef',            default  => sub { {} });
-has config_uri        => (is => 'ro', writer => '_config_uri',        isa      => 'Str');
-has config            => (is => 'ro', writer => '_config',            isa      => 'Helm::Conf');
-has sudo              => (is => 'ro', writer => '_sudo',              isa      => 'Str');
-has lock_type         => (is => 'ro', writer => '_lock_type',         isa      => 'LOCK_TYPE');
-has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa      => 'FileHandle | Undef');
-has sleep             => (is => 'ro', writer => '_sleep',             isa      => 'Num');
-has current_server    => (is => 'ro', writer => '_current_server',    isa      => 'Str');
+
+has task           => (is => 'ro', writer => '_task',           required => 1);
+has extra_options  => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
+has config_uri     => (is => 'ro', writer => '_config_uri',     isa      => 'Str');
+has config         => (is => 'ro', writer => '_config',         isa      => 'Helm::Conf');
+has sudo           => (is => 'ro', writer => '_sudo',           isa      => 'Str');
+has lock_type      => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
+has sleep          => (is => 'ro', writer => '_sleep',          isa      => 'Num');
+has current_server => (is => 'ro', writer => '_current_server', isa      => 'Str');
+has notify         => (is => 'ro', writer => '_notify',         isa      => 'Helm::Notify');
+has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa => 'FileHandle|Undef');
 has servers    => (
     is      => 'ro',
     writer  => '_servers',
@@ -38,18 +41,39 @@ has roles => (
     isa     => 'ArrayRef[Str]',
     default => sub { [] },
 );
-has notifies => (
-    is      => 'ro',
-    writer  => '_notifies',
-    isa     => 'ArrayRef',
-    default => sub { [] },
-);
 has notify_level => (
     is      => 'ro',
     writer  => '_notify_level',
     isa     => 'NOTIFY_LEVEL',
     default => 'info',
 );
+
+around BUILDARGS => sub {
+    my $orig  = shift;
+    my $class = shift;
+    my %args  = (@_ == 1 && ref $_[0] && ref $_[0] eq 'HASH') ? %{$_[0]} : @_;
+
+    # allow "notifies" list of URIs to be passed into new() and then convert them into
+    # a Helm::Notify object with various Helm::Notify::Channel objects
+    if (my $notify_uris = delete $args{notifies}) {
+        my $notify =
+          Helm::Notify->new($args{notify_level} ? (notify_level => $args{notify_level}) : ());
+        foreach my $uri (@$notify_uris) {
+            # console is a special case
+            $uri = 'console://blah' if $uri eq 'console';
+            $uri = try {
+                URI->new($uri);
+            }
+            catch {
+                croak("Invalid notification URI $uri");
+            };
+            $notify->load_channel($uri);
+        }
+        $args{notify} = $notify;
+    }
+
+    return $class->$orig(%args);
+};
 
 sub BUILD {
     my $self = shift;
@@ -82,9 +106,6 @@ sub BUILD {
         croak("You must specify servers if you don't have a config") if !$self->config;
         $self->_servers([$self->config->get_all_server_names]);
     }
-
-    # TODO - expand any notify URIs into objects
-    
 }
 
 sub steer {
@@ -103,17 +124,20 @@ sub steer {
         }
     }
 
+    $self->notify->initialize($self);
+
     my $task_obj = $task_class->new($self);
     $task_obj->validate();
 
     # make sure have a local lock if we need it
-    croak("Cannot obtain a local helm lock. Is another helm process running?")
+    $self->die("Cannot obtain a local helm lock. Is another helm process running?")
       if ($self->lock_type eq 'local' || $self->lock_type eq 'both') && !$self->_get_local_lock;
 
     # make sure we can connect to all of the servers
     my %ssh_connections;
     my @servers = @{$self->servers};
     foreach my $server (@servers) {
+        $self->notify->debug("Setting up SSH connection to $server");
         my $ssh = Net::OpenSSH->new(
             $server,
             ctl_dir     => catdir(File::HomeDir->my_home, '.helm'),
@@ -130,27 +154,29 @@ sub steer {
         $self->_current_server($server);
         my $ssh = $ssh_connections{$server};
 
-        warn "$server\n$fat_line\n";
+        $self->notify->info("$server\n$fat_line");
 
         # get a lock on the server if we need to
-        croak("Cannot obtain remote helm lock on $server. Is another helm process trying to work there?")
-            if( $self->lock_type eq 'remote' || $self->lock_type eq 'both') && !$self->_get_remote_lock($ssh);
+        $self->die("Cannot obtain remote lock on $server. Is another helm process working there?")
+          if ($self->lock_type eq 'remote' || $self->lock_type eq 'both')
+          && !$self->_get_remote_lock($ssh);
+
         $task_obj->execute(
             ssh    => $ssh,
             server => $server,
         );
         $self->_release_remote_lock($ssh);
-        warn "$thin_line\n";
-        warn "\n" unless $i == $#servers;
+        $self->notify->info($thin_line);
         sleep($self->sleep) if $self->sleep;
     }
 
     # release the local lock
     $self->_release_local_lock();
+    $self->notify->finalize($self);
 }
 
 sub load_configuration {
-    my ($class, $uri) = @_;
+    my ($self, $uri) = @_;
     $uri = try { 
         URI->new($uri) 
     } catch {
@@ -164,17 +190,20 @@ sub load_configuration {
     eval "require $loader_class";
     croak("Unknown config type: $scheme. Couldn't load $loader_class: $@") if $@;
 
+    $self->notify->debug("Loading configuration for $uri from $loader_class");
     return $loader_class->load($uri);
 }
 
 sub _get_local_lock {
     my $self = shift;
+    $self->notify->debug("Trying to acquire global local helm lock");
     # lock the file so nothing else can run at the same time
     my $lock_handle;
     my $lock_file = $self->_local_lock_file();
     open($lock_handle, '>', $lock_file) or croak("Can't open $lock_file for locking: $!");
     if (flock($lock_handle, LOCK_EX | LOCK_NB)) {
         $self->_local_lock_handle($lock_handle);
+        $self->notify->debug("Local helm lock obtained");
         return 1;
     } else {
         return 0;
@@ -183,7 +212,10 @@ sub _get_local_lock {
 
 sub _release_local_lock {
     my $self = shift;
-    close($self->_local_lock_handle) if $self->_local_lock_handle;
+    if($self->local_lock_handle) {
+        $self->notify->debug("Releasing global local helm lock");
+        close($self->local_lock_handle) 
+    }
 }
 
 sub _local_lock_file {
@@ -193,6 +225,8 @@ sub _local_lock_file {
 
 sub _get_remote_lock {
     my ($self, $ssh) = @_;
+    my $server = $self->current_server;
+    $self->notify->debug("Trying to obtain remote server lock for $server");
 
     # make sure the lock file on the server doesn't exist
     my $lock_file = $self->_remote_lock_file();
@@ -207,14 +241,18 @@ sub _get_remote_lock {
     } else {
         # XXX - there's a race condition here, not sure what the right fix is though
         $self->run_remote_command(ssh => $ssh, command => "touch $lock_file");
+        $self->notify->debug("Remote server lock for $server obtained");
         return 1;
     }
 }
 
 sub _release_remote_lock {
     my ($self, $ssh) = @_;
-    my $lock_file = $self->_remote_lock_file();
-    $self->run_remote_command(ssh => $ssh, command => "rm -f $lock_file");
+    if( $self->lock_type eq 'remote' || $self->lock_type eq 'both' ) {
+        $self->notify->debug("Releasing remote server lock for " . $self->current_server);
+        my $lock_file = $self->_remote_lock_file();
+        $self->run_remote_command(ssh => $ssh, command => "rm -f $lock_file");
+    }
 }
 
 sub _remote_lock_file {
@@ -229,8 +267,16 @@ sub run_remote_command {
     my $cmd         = $args{command};
     my $ssh_method  = $args{ssh_method} || 'system';
     my $server      = $args{server} || $self->current_server;
+
+    $self->notify->debug("Running remote command ($cmd) on server $server");
     $ssh->$ssh_method($ssh_options, $cmd)
-      or croak("Can't execute command ($cmd) on server $server: " . $ssh->error);
+      or $self->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
+}
+
+sub die {
+    my ($self, $msg) = @_;
+    $self->notify->error($msg);
+    exit(1);
 }
 
 __PACKAGE__->meta->make_immutable;

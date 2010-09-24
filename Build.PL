@@ -18,6 +18,7 @@ my $build = Module::Build->new(
         'Data::UUID'            => '1.217',
         'Carp'                  => '0',
         'Fcntl'                 => '0',
+        'Term::ANSIColor'       => '3.00',
     },
     recommends         => {},
     build_requires     => {},

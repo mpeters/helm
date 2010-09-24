@@ -10,7 +10,7 @@ SYNOPSIS
         # run a command on only the servers which run memcache
         helm run --command "pidof memcached" --roles memcache 
 
-        # copy a file to ever server in your cluster
+        # copy a file to every server in your cluster
         helm put --local foo.tar.gz --remote /tmp/bar.tar.gz
 
         # rsync a local folder to specific servers
@@ -81,6 +81,25 @@ OPTIONS
         (see CONFIGURATION).
 
             --config file:///etc/helm.conf
+
+    --notify
+        Send notifications to a specific channel. Multiple channels can be
+        specified by specifying this option multiple times. The value of
+        this option is the URI of the channel to be used. See "NOTIFICATION
+        CHANNELS" for more details.
+
+            # send notifications to a comany tech IRC channel 
+            --notify irc://irc.company.com/tech
+
+            # send notifications to a log file and to email 
+            --notify file:///var/log/helm.log --notify mailto://notifications@company.com
+
+        Notifications are also sent to "STDERR" unless the --quite option is
+        also passed.
+
+    --notify-level
+        The notification level used. Can be one of "debug", "info", "warn",
+        and "error". Defaults to "info".
 
     --load
         Allows you to load other 3rd party plugin modules to extend "helm"

@@ -28,7 +28,7 @@ sub expand_server_name {
             }
         }
     }
-    return $match;
+    return $match || $name;
 }
 
 sub get_all_server_names {

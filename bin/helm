@@ -22,7 +22,7 @@ helm - Easy server and cluster automation
     # run a command on only the servers which run memcache
     helm run --command "pidof memcached" --roles memcache 
 
-    # copy a file to ever server in your cluster
+    # copy a file to every server in your cluster
     helm put --local foo.tar.gz --remote /tmp/bar.tar.gz
 
     # rsync a local folder to specific servers
@@ -109,20 +109,21 @@ unless (grep { $_ eq '--noenv' } @ARGV) {
 
 Getopt::Long::Configure('pass_through');
 GetOptions(
-    'servers=s'                 => \@servers,
-    'roles=s'                   => \@roles,
-    'configuration|config=s'    => \$config_uri,
-    'notify=s'                  => \@notifies,
-    'load=s'                    => \@libs,
-    'sudo=s'                    => \$sudo,
-    'lock=s'                    => \$lock_type,
-    'sleep=i'                   => \$sleep,
-    'noenv'                     => \$no_env,
-    'quiet'                     => \$quiet,
-    'man'                       => \$man,
-    'h|help'                    => \$help,
-    'v|version'                 => \$version,
-    'dump-config|dump_config'   => \$dump_config,
+    'servers=s'                   => \@servers,
+    'roles=s'                     => \@roles,
+    'configuration|config=s'      => \$config_uri,
+    'notify-level|notify_level=s' => \$notify_level,
+    'notify=s'                    => \@notifies,
+    'load=s'                      => \@libs,
+    'sudo=s'                      => \$sudo,
+    'lock=s'                      => \$lock_type,
+    'sleep=i'                     => \$sleep,
+    'noenv'                       => \$no_env,
+    'quiet'                       => \$quiet,
+    'man'                         => \$man,
+    'h|help'                      => \$help,
+    'v|version'                   => \$version,
+    'dump-config|dump_config'     => \$dump_config,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
@@ -198,7 +199,7 @@ try {
         extra_options => \%extra_options,
         servers       => \@servers,
         roles         => \@roles,
-        notifies      => \@notifies,
+        notifies      => ['console', @notifies],
         notify_level  => $notify_level,
         sudo          => $sudo,
         lock_type     => $lock_type,
@@ -260,26 +261,26 @@ L<CONFIGURATION>).
 
 =cut
 
-#=item --notify
-#
-#Send notifications to a specific channel. Multiple channels can be
-#specified by specifying this option multiple times. The value of this
-#option is the URI of the channel to be used.  See L<NOTIFICATION CHANNELS>
-#for more details.
-#
-#    # send notifications to a comany tech IRC channel 
-#    --notify irc://irc.company.com/tech
-#
-#    # send notifications to a log file and to email 
-#    --notify file:///var/log/helm.log --notify mailto://notifications@company.com
-#
-#Notifications are also sent to C<STDERR> unless the L<--quite> option
-#is also passed.
-#
-#=item --notify-level
-#
-#The notification level used. Can be one of C<debug>, C<info>, C<warn>,
-#C<error>, C<fatal>.  Defaults to C<info>.
+=item --notify
+
+Send notifications to a specific channel. Multiple channels can be
+specified by specifying this option multiple times. The value of this
+option is the URI of the channel to be used.  See L<NOTIFICATION CHANNELS>
+for more details.
+
+    # send notifications to a comany tech IRC channel 
+    --notify irc://irc.company.com/tech
+
+    # send notifications to a log file and to email 
+    --notify file:///var/log/helm.log --notify mailto://notifications@company.com
+
+Notifications are also sent to C<STDERR> unless the L<--quite> option
+is also passed.
+
+=item --notify-level
+
+The notification level used. Can be one of C<debug>, C<info>, C<warn>,
+and C<error>.  Defaults to C<info>.
 
 =item --load
 
