@@ -23,8 +23,9 @@ has config_uri        => (is => 'ro', writer => '_config_uri',        isa      =
 has config            => (is => 'ro', writer => '_config',            isa      => 'Helm::Conf');
 has sudo              => (is => 'ro', writer => '_sudo',              isa      => 'Str');
 has lock_type         => (is => 'ro', writer => '_lock_type',         isa      => 'LOCK_TYPE');
-has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa      => 'FileHandle');
+has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa      => 'FileHandle | Undef');
 has sleep             => (is => 'ro', writer => '_sleep',             isa      => 'Num');
+has current_server    => (is => 'ro', writer => '_current_server',    isa      => 'Str');
 has servers    => (
     is      => 'ro',
     writer  => '_servers',
@@ -127,17 +128,26 @@ sub steer {
     my $thin_line = '-' x 70;
     foreach my $i (0..$#servers) {
         my $server = $servers[$i];
+        $self->_current_server($server);
+        my $ssh = $ssh_connections{$server};
+
         warn "$server\n$fat_line\n";
+
+        # get a lock on the server if we need to
+        croak("Cannot obtain remote helm lock on $server. Is another helm process trying to work there?")
+            if( $self->lock_type eq 'remote' || $self->lock_type eq 'both') && !$self->_get_remote_lock($ssh);
         $task_obj->execute(
-            ssh    => $ssh_connections{$server},
+            ssh    => $ssh,
             server => $server,
         );
+        $self->_release_remote_lock($ssh);
         warn "$thin_line\n";
         warn "\n" unless $i == $#servers;
         sleep($self->sleep) if $self->sleep;
     }
 
     # release the local lock
+    $self->_release_local_lock();
 }
 
 sub load_configuration {
@@ -179,6 +189,48 @@ sub _release_local_lock {
 sub _local_lock_file {
     my $self = shift;
     return catfile(tmpdir(), 'helm.lock');
+}
+
+sub _get_remote_lock {
+    my ($self, $ssh) = @_;
+
+    # make sure the lock file on the server doesn't exist
+    my $lock_file = $self->_remote_lock_file();
+    my $output = $self->run_remote_command(
+        ssh        => $ssh,
+        command    => qq(if [ -e "/tmp/helm.remote.lock" ]; then echo "lock found"; else echo "no lock found"; fi),
+        ssh_method => 'capture',
+    );
+    chomp($output);
+    if( $output eq 'lock found') {
+        return 0;
+    } else {
+        # XXX - there's a race condition here, not sure what the right fix is though
+        $self->run_remote_command(ssh => $ssh, command => "touch $lock_file");
+        return 1;
+    }
+}
+
+sub _release_remote_lock {
+    my ($self, $ssh) = @_;
+    my $lock_file = $self->_remote_lock_file();
+    $self->run_remote_command(ssh => $ssh, command => "rm -f $lock_file");
+}
+
+sub _remote_lock_file {
+    my $self = shift;
+    return catfile(tmpdir(), 'helm.remote.lock');
+}
+
+sub run_remote_command {
+    my ($self, %args) = @_;
+    my $ssh         = $args{ssh};
+    my $ssh_options = $args{ssh_options} || {};
+    my $cmd         = $args{command};
+    my $ssh_method  = $args{ssh_method} || 'system';
+    my $server      = $args{server} || $self->current_server;
+    $ssh->$ssh_method($ssh_options, $cmd)
+      or croak("Can't execute command ($cmd) on server $server: " . $ssh->error);
 }
 
 __PACKAGE__->meta->make_immutable;
