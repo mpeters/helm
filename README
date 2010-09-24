@@ -38,8 +38,8 @@ DESCRIPTION
     *   Convenient .helmrc file to reduce the number of options you need to
         pass on every invocation of "helm".
 
-    *   Default locking on the client and server so that multiple
-        invocations of "helm" aren't running at the same time.
+    *   Locking on the client and/or server so that multiple invocations of
+        "helm" aren't running at the same time.
 
 OPTIONS
     "helm" has several options that can be specified for all commands. Any
@@ -103,6 +103,11 @@ OPTIONS
         different user. We also try to make sure that things like file
         permissions (on tasks like "put" and "patch") are also handled so
         that the resulting files are owned by this sudo user.
+
+    --lock
+        This options allows you to have control over whether concurrent
+        "helm" processes can be running on either the local or remote
+        servers. The value can be one of: "none", "local", "remote", "both".
 
     --noenv
         Suppress the default loading of the ".helmrc file" file.
@@ -230,9 +235,9 @@ THE .helmrc FILE
 
 CAVEATS
     Multi-Platform
-        This has been developed and tested on Linux only. Dealing with
-        multiple platforms and writing multi-platform tasks has been punted
-        to the future.
+        This has been developed and tested on Linux (with bash as the shell
+        on the remote hosts) only. Dealing with multiple platforms and
+        writing multi-platform tasks has been punted to the future.
 
     Alpha Software
         This software is very ALPHA, which means it's interface is likely to
