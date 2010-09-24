@@ -17,3 +17,5 @@ Several things I'd like to do:
 
 + --compare option to compare outputs from the different servers
     in an intelligent manner
+
++ colored output for "console" notification channel via Term::ANSIColor
