@@ -3,11 +3,17 @@ Several things I'd like to do:
 + Actual loading and registration of configuration, notification and task modules
     rather than just relying on loading things in the Helm::* namespace
 
++ Help command and help docs for each task
+
++ --remote-env options to set remote ENV variables?
+
 + --parallel flag so things can be done in parallel
 
 + --port option
 
 + --timeout option
+
++ --capture option which allows stdout, stderr, both, none
 
 + --compare option to compare outputs from the different servers
     in an intelligent manner
