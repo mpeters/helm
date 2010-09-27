@@ -133,10 +133,12 @@ sub steer {
     $self->die("Cannot obtain a local helm lock. Is another helm process running?")
       if ($self->lock_type eq 'local' || $self->lock_type eq 'both') && !$self->_get_local_lock;
 
-    # make sure we can connect to all of the servers
-    my %ssh_connections;
+    # execute the task for each server
     my @servers = @{$self->servers};
-    foreach my $server (@servers) {
+    foreach my $i (0..$#servers) {
+        my $server = $servers[$i];
+        $self->_current_server($server);
+
         $self->notify->debug("Setting up SSH connection to $server");
         my $ssh = Net::OpenSSH->new(
             $server,
@@ -144,14 +146,6 @@ sub steer {
             strict_mode => 0,
         );
         $ssh->error && croak("Can't ssh to $server: " . $ssh->error);
-        $ssh_connections{$server} = $ssh;
-    }
-
-    my $line = '-' x 70;
-    foreach my $i (0..$#servers) {
-        my $server = $servers[$i];
-        $self->_current_server($server);
-        my $ssh = $ssh_connections{$server};
 
         $self->notify->start_server($server);
 
