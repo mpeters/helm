@@ -9,13 +9,7 @@ Several things I'd like to do:
 
 + --parallel flag so things can be done in parallel
 
-+ --port option
-
-+ --timeout option
-
 + --capture option which allows stdout, stderr, both, none
 
 + --compare option to compare outputs from the different servers
     in an intelligent manner
-
-+ colored output for "console" notification channel via Term::ANSIColor

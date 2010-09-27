@@ -28,6 +28,8 @@ has lock_type      => (is => 'ro', writer => '_lock_type',      isa      => 'LOC
 has sleep          => (is => 'ro', writer => '_sleep',          isa      => 'Num');
 has current_server => (is => 'ro', writer => '_current_server', isa      => 'Str');
 has notify         => (is => 'ro', writer => '_notify',         isa      => 'Helm::Notify');
+has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
+has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
 has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa => 'FileHandle|Undef');
 has servers    => (
     is      => 'ro',
@@ -140,12 +142,14 @@ sub steer {
         $self->_current_server($server);
 
         $self->notify->debug("Setting up SSH connection to $server");
-        my $ssh = Net::OpenSSH->new(
-            $server,
+        my %ssh_args = (
             ctl_dir     => catdir(File::HomeDir->my_home, '.helm'),
             strict_mode => 0,
         );
-        $ssh->error && croak("Can't ssh to $server: " . $ssh->error);
+        $ssh_args{port}    = $self->default_port if $self->default_port;
+        $ssh_args{timeout} = $self->timeout      if $self->timeout;
+        my $ssh = Net::OpenSSH->new($server, %ssh_args);
+        $ssh->error && $self->die("Can't ssh to $server: " . $ssh->error);
 
         $self->notify->start_server($server);
 

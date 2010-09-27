@@ -78,19 +78,22 @@ of C<helm> aren't running at the same time.
 
 =cut
 
-my $lock_type    = 'none';
-my $sudo = '';
-my $sleep = 0;
+my $lock_type = 'none';
+my $sudo      = '';
+my $sleep     = 0;
+my $port      = 22;
+my $timeout   = 30;
 my (
-    @servers, @roles, $config_uri, @notifies, $notify_level, @libs, $no_env,
-    $quiet,   $man,   $help,       $version,  $dump_config, $debug,
+    @servers, @roles,       $config_uri, @notifies, $notify_level,
+    @libs,    $no_rc_file,  $quiet,      $man,      $help,
+    $version, $dump_config, $debug,
 );
 
 # the main task (make sure not to grab an option by mistake)
 my $task = defined $ARGV[0] && $ARGV[0] !~ /^-/ ? shift @ARGV : undef;
 
-# load the .helmrc file unless we have the --noenv set
-unless (grep { $_ eq '--noenv' } @ARGV) {
+# load the .helmrc file unless we have the --no-rc-file set
+unless (grep { $_ eq '--no-rc-file' } @ARGV) {
     my $file = $ENV{HELMRC};
     # look in the current directory
     unless ($file && -e $file) {
@@ -117,7 +120,9 @@ GetOptions(
     'sudo=s'                      => \$sudo,
     'lock=s'                      => \$lock_type,
     'sleep=i'                     => \$sleep,
-    'noenv'                       => \$no_env,
+    'port=i'                      => \$port,
+    'timeout=i'                   => \$timeout,
+    'no-rc-file'                  => \$no_rc_file,
     'quiet'                       => \$quiet,
     'man'                         => \$man,
     'h|help'                      => \$help,
@@ -215,6 +220,8 @@ try {
         sudo          => $sudo,
         lock_type     => $lock_type,
         sleep         => $sleep,
+        default_port  => $port,
+        timeout       => $timeout,
     );
     $helm->steer();
 } catch {
@@ -270,8 +277,6 @@ L<CONFIGURATION>).
 
     --config file:///etc/helm.conf
 
-=cut
-
 =item --notify
 
 Send notifications to a specific channel. Multiple channels can be
@@ -321,10 +326,18 @@ This options allows you to have control over whether concurrent C<helm> processe
 can be running on either the local or remote servers. The value can be one of: C<none>,
 C<local>, C<remote>, C<both>.
 
-=item --noenv
+=item --no-rc-file
 
 Suppress the default loading of the L<".helmrc file"|THE .helmrc FILE>
 file.
+
+=item --port
+
+The port to use for SSH on all of the remote servers. Defaults to the standard (22).
+
+=item --timeout
+
+The timeout in seconds to give the ssh connections. Default is 30 seconds.
 
 =item --quiet
 
@@ -462,7 +475,7 @@ C<helm> looks in your home directory or the current directory for
 the F<.helmrc>. You can specify another location with the C<HELMRC>
 environment variable.
 
-If L<--noenv> is specified on the command line, the F<.helmrc> file
+If L<--no-rc-file> is specified on the command line, the F<.helmrc> file
 is ignored.
 
 =head1 CAVEATS
