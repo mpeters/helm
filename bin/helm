@@ -78,13 +78,12 @@ of C<helm> aren't running at the same time.
 
 =cut
 
-my $notify_level = 'info';
 my $lock_type    = 'none';
 my $sudo = '';
 my $sleep = 0;
 my (
-    @servers, @roles, $config_uri, @notifies, @libs, $no_env,
-    $quiet,   $man,   $help,       $version,  $dump_config,
+    @servers, @roles, $config_uri, @notifies, $notify_level, @libs, $no_env,
+    $quiet,   $man,   $help,       $version,  $dump_config, $debug,
 );
 
 # the main task (make sure not to grab an option by mistake)
@@ -124,6 +123,7 @@ GetOptions(
     'h|help'                      => \$help,
     'v|version'                   => \$version,
     'dump-config|dump_config'     => \$dump_config,
+    'debug'                       => \$debug,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
@@ -138,6 +138,17 @@ if(@libs) {
         eval "require $lib";
         die "Could not load library $lib: $@\n" if $@;
     }
+}
+
+if( $debug ) {
+    if(!$notify_level || $notify_level eq 'debug') {
+        $notify_level = 'debug';
+    } else {
+        print STDERR "Can't specify --debug and --notify-level at the same time\n";
+        exit(1);
+    }
+} elsif(!$notify_level) {
+    $notify_level = 'info';
 }
 
 # split servers and roles on commas if specified together
