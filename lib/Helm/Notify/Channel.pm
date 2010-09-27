@@ -27,6 +27,16 @@ sub finalize {
     die "You must implement the finalize() method in your child class " . ref($self) . "!";
 }
 
+sub start_server {
+    my ($self, $server) = @_;
+    die "You must implement the start_server() method in your child class " . ref($self) . "!";
+}
+
+sub end_server {
+    my ($self, $server) = @_;
+    die "You must implement the end_server() method in your child class " . ref($self) . "!";
+}
+
 sub debug {
     my ($self, $msg) = @_;
     die "You must implement the debug() method in your child class " . ref($self) . "!";

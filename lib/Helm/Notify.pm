@@ -43,6 +43,16 @@ sub finalize {
     $_->finalize($helm) foreach @{$self->channels};
 }
 
+sub start_server {
+    my ($self, $server) = @_;
+    $_->start_server($server) foreach @{$self->channels};
+}
+
+sub end_server {
+    my ($self, $server) = @_;
+    $_->end_server($server) foreach @{$self->channels};
+}
+
 sub debug {
     my ($self, $msg) = @_;
     if( $self->notify_level eq 'debug' ) {

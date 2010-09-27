@@ -147,14 +147,13 @@ sub steer {
         $ssh_connections{$server} = $ssh;
     }
 
-    my $fat_line = '=' x 70;
-    my $thin_line = '-' x 70;
+    my $line = '-' x 70;
     foreach my $i (0..$#servers) {
         my $server = $servers[$i];
         $self->_current_server($server);
         my $ssh = $ssh_connections{$server};
 
-        $self->notify->info("$server\n$fat_line");
+        $self->notify->start_server($server);
 
         # get a lock on the server if we need to
         $self->die("Cannot obtain remote lock on $server. Is another helm process working there?")
@@ -165,8 +164,9 @@ sub steer {
             ssh    => $ssh,
             server => $server,
         );
+
+        $self->notify->end_server($server);
         $self->_release_remote_lock($ssh);
-        $self->notify->info($thin_line);
         sleep($self->sleep) if $self->sleep;
     }
 
