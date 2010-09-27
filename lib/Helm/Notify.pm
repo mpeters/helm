@@ -4,7 +4,6 @@ use warnings;
 use Moose;
 use Moose::Util::TypeConstraints qw(enum);
 use namespace::autoclean;
-use Carp qw(croak);
 
 enum NOTIFY_LEVEL => qw(debug info warn error);
 has channels => (
@@ -24,10 +23,16 @@ sub load_channel {
     my ($self, $uri) = @_;
 
     my $scheme = $uri->scheme;
-    croak("Unknown notification type for $uri") unless $scheme;
+    unless($scheme) {
+        # TODO - can we handle this better?
+        die "Unknown notification type for $uri";
+    }
     my $loader_class  = "Helm::Notify::Channel::$scheme";
     eval "require $loader_class";
-    croak("Unknown config type: $scheme. Couldn't load $loader_class: $@") if $@;
+    if( $@ ) {
+        # TODO - can we handle this better?
+        die "Unknown config type: $scheme. Couldn't load $loader_class: $@";
+    }
 
     # add the new channel to our list
     $self->_channels([@{$self->channels}, $loader_class->new($uri)]);
@@ -74,7 +79,7 @@ sub warn {
         $_->warn($msg) foreach @channels;
     } else {
         # make sure something happens even if we don't have any channels.
-        warn("Error: $msg");
+        warn("Warning: $msg");
     }
 }
 
@@ -85,7 +90,7 @@ sub error {
         $_->error($msg) foreach @channels;
     } else {
         # make sure something happens even if we don't have any channels.
-        croak("Error: $msg");
+        die("Error: $msg");
     }
 }
 

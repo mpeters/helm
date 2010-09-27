@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use Moose;
 use namespace::autoclean;
-use Carp qw(croak);
 
 has uri => (is => 'ro', writer => '_uri', isa => 'URI');
 

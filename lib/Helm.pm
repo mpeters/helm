@@ -11,8 +11,9 @@ use File::HomeDir;
 use Net::OpenSSH;
 use Fcntl qw(:flock);
 use File::Basename qw(basename);
-use Carp qw(croak);
 use Helm::Notify;
+use Helm::Server;
+use Scalar::Util qw(blessed);
 
 our $VERION = 0.1;
 
@@ -26,7 +27,7 @@ has config         => (is => 'ro', writer => '_config',         isa      => 'Hel
 has sudo           => (is => 'ro', writer => '_sudo',           isa      => 'Str');
 has lock_type      => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
 has sleep          => (is => 'ro', writer => '_sleep',          isa      => 'Num');
-has current_server => (is => 'ro', writer => '_current_server', isa      => 'Str');
+has current_server => (is => 'ro', writer => '_current_server', isa      => 'Helm::Server');
 has notify         => (is => 'ro', writer => '_notify',         isa      => 'Helm::Notify');
 has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
 has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
@@ -67,7 +68,8 @@ around BUILDARGS => sub {
                 URI->new($uri);
             }
             catch {
-                croak("Invalid notification URI $uri");
+                print STDERR "Invalid notification URI $uri\n";
+                exit(1);
             };
             $notify->load_channel($uri);
         }
@@ -84,29 +86,41 @@ sub BUILD {
     if ($self->config_uri && !$self->config ) {
         $self->_config($self->load_configuration($self->config_uri));
     }
+    $self->notify->initialize($self);
 
-    # if we have servers, let's fully expand their names in case we're using abbreviations
-    my @servers = @{$self->servers};
-    if(@servers) {
-        if( my $config = $self->config ) {
-            $self->_servers([map { $config->expand_server_name($_) } @servers]);
+    # if we have servers let's turn them into Helm::Server objects, let's fully expand their names in case we're using abbreviations
+    my @server_names = @{$self->servers};
+    if(@server_names) {
+        my @server_objs;
+        foreach my $server_name (@server_names) {
+            # if it's already a Helm::Server just keep it
+            if( ref $server_name && blessed($server_name) && $server_name->isa('Helm::Server') ) {
+                push(@server_objs, $server_name);
+            } elsif( my $config = $self->config ) {
+                # with a config file we can find out more about these servers
+                my $server = $config->get_server_by_abbrev($server_name, $self)
+                  || Helm::Server->new(name => $server_name);
+                push(@server_objs, $server);
+            } else {
+                push(@server_objs, Helm::Server->new(name => $server_name));
+            }
         }
     }
 
     # if we have any roles, then get the servers with those roles
     my @roles = @{$self->roles};
     if( @roles ) {
-        croak("Can't specify roles without a config") if !$self->config;
+        $self->die("Can't specify roles without a config") if !$self->config;
         my @servers = @{$self->servers};
-        push(@servers, $self->config->get_server_names_by_roles(@roles));
+        push(@servers, $self->config->get_servers_by_roles(@roles));
         $self->_servers(\@servers);
     }
     
     # if we still don't have any servers, then use 'em all
-    @servers = @{$self->servers};
+    my @servers = @{$self->servers};
     if(!@servers) {
-        croak("You must specify servers if you don't have a config") if !$self->config;
-        $self->_servers([$self->config->get_all_server_names]);
+        $self->die("You must specify servers if you don't have a config") if !$self->config;
+        $self->_servers($self->config->servers);
     }
 }
 
@@ -120,13 +134,11 @@ sub steer {
 
     if( $@ ) {
         if( $@ =~ /Can't locate Helm\/Task\/$task.pm/ ) {
-            croak("Unknown task $task");
+            $self->die("Unknown task $task");
         } else {
-            croak("Could not load module $task_class for $task");
+            $self->die("Could not load module $task_class for $task");
         }
     }
-
-    $self->notify->initialize($self);
 
     my $task_obj = $task_class->new($self);
     $task_obj->validate();
@@ -136,22 +148,20 @@ sub steer {
       if ($self->lock_type eq 'local' || $self->lock_type eq 'both') && !$self->_get_local_lock;
 
     # execute the task for each server
-    my @servers = @{$self->servers};
-    foreach my $i (0..$#servers) {
-        my $server = $servers[$i];
+    foreach my $server (@{$self->servers}) {
         $self->_current_server($server);
+        $self->notify->start_server($server);
 
-        $self->notify->debug("Setting up SSH connection to $server");
+        my $port = $server->port || $self->default_port;
         my %ssh_args = (
             ctl_dir     => catdir(File::HomeDir->my_home, '.helm'),
             strict_mode => 0,
         );
-        $ssh_args{port}    = $self->default_port if $self->default_port;
+        $ssh_args{port}    = $port if $port;
         $ssh_args{timeout} = $self->timeout      if $self->timeout;
-        my $ssh = Net::OpenSSH->new($server, %ssh_args);
+        $self->notify->debug("Setting up SSH connection to $server" . ($port ? ":$port" : ''));
+        my $ssh = Net::OpenSSH->new($server->name, %ssh_args);
         $ssh->error && $self->die("Can't ssh to $server: " . $ssh->error);
-
-        $self->notify->start_server($server);
 
         # get a lock on the server if we need to
         $self->die("Cannot obtain remote lock on $server. Is another helm process working there?")
@@ -178,18 +188,18 @@ sub load_configuration {
     $uri = try { 
         URI->new($uri) 
     } catch {
-        croak("Invalid configuration URI $uri");
+        $self->die("Invalid configuration URI $uri");
     };
 
     # try to load the right config module
     my $scheme = $uri->scheme;
-    croak("Unknown config type for $uri") unless $scheme;
+    $self->die("Unknown config type for $uri") unless $scheme;
     my $loader_class  = "Helm::Conf::Loader::$scheme";
     eval "require $loader_class";
-    croak("Unknown config type: $scheme. Couldn't load $loader_class: $@") if $@;
+    $self->die("Unknown config type: $scheme. Couldn't load $loader_class: $@") if $@;
 
     $self->notify->debug("Loading configuration for $uri from $loader_class");
-    return $loader_class->load($uri);
+    return $loader_class->load(uri => $uri, helm => $self);
 }
 
 sub _get_local_lock {
@@ -198,7 +208,7 @@ sub _get_local_lock {
     # lock the file so nothing else can run at the same time
     my $lock_handle;
     my $lock_file = $self->_local_lock_file();
-    open($lock_handle, '>', $lock_file) or croak("Can't open $lock_file for locking: $!");
+    open($lock_handle, '>', $lock_file) or $self->die("Can't open $lock_file for locking: $!");
     if (flock($lock_handle, LOCK_EX | LOCK_NB)) {
         $self->_local_lock_handle($lock_handle);
         $self->notify->debug("Local helm lock obtained");
