@@ -275,7 +275,7 @@ on all servers (as defined in your L<CONFIGURATION>).
 Which resource to use for pulling cluster configuration information (see
 L<CONFIGURATION>).
 
-    --config file:///etc/helm.conf
+    --config helm:///etc/helm.conf
 
 =item --notify
 
@@ -370,10 +370,10 @@ Display a dump of the configuration data as understood by Helm
 By default, C<helm> doesn't use a configuration file, but certain features
 require it (using roles, server abbreviations, etc) so it's best to
 have one. You can tell C<helm> which configuration resource to use by using
-the L<--config> option. Currently, only the C<file://> URI scheme
+the L<--config> option. Currently, only the C<helm://> URI scheme
 is supported.  
 
-    --config file:///etc/helm.conf
+    --config helm:///etc/helm.conf
 
 A configuration file will look something like this:
 
@@ -395,7 +395,7 @@ db1.company.com and db2.company.com). It defines 4 different roles (web,
 db, db_master, db_slave).
 
 C<helm> currently just supports a single configuration resource format
-(C<file://>), but the internals are flexible enough that more formats
+(C<helm://>), but the internals are flexible enough that more formats
 could be supported in the future, including other configuration methods
 like LDAP, etc.
 

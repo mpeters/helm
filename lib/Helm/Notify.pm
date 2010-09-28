@@ -19,23 +19,9 @@ has notify_level => (
     default => 'info',
 );
 
-sub load_channel {
-    my ($self, $uri) = @_;
-
-    my $scheme = $uri->scheme;
-    unless($scheme) {
-        # TODO - can we handle this better?
-        die "Unknown notification type for $uri";
-    }
-    my $loader_class  = "Helm::Notify::Channel::$scheme";
-    eval "require $loader_class";
-    if( $@ ) {
-        # TODO - can we handle this better?
-        die "Unknown config type: $scheme. Couldn't load $loader_class: $@";
-    }
-
-    # add the new channel to our list
-    $self->_channels([@{$self->channels}, $loader_class->new($uri)]);
+sub add_channel {
+    my ($self, $channel) = @_;
+    push(@{$self->channels}, $channel);
 }
 
 sub initialize {

@@ -31,7 +31,7 @@ has current_server => (is => 'ro', writer => '_current_server', isa      => 'Hel
 has notify         => (is => 'ro', writer => '_notify',         isa      => 'Helm::Notify');
 has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
 has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
-has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa => 'FileHandle|Undef');
+has local_lock_handle  => (is => 'ro', writer => '_local_lock_handle',  isa => 'FileHandle|Undef');
 has servers    => (
     is      => 'ro',
     writer  => '_servers',
@@ -51,6 +51,19 @@ has notify_level => (
     default => 'info',
 );
 
+my %REGISTERED_MODULES = (
+    task => {
+        get       => 'Helm::Task::get',
+        patch     => 'Helm::Task::patch',
+        put       => 'Helm::Task::put',
+        rsync_put => 'Helm::Task::rsync_put',
+        run       => 'Helm::Task::run',
+        exec      => 'Helm::Task::run',
+    },
+    notify        => {console => 'Helm::Notify::Channel::console',},
+    configuration => {helm    => 'Helm::Conf::Loader::helm',},
+);
+
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;
@@ -66,12 +79,23 @@ around BUILDARGS => sub {
             $uri = 'console://blah' if $uri eq 'console';
             $uri = try {
                 URI->new($uri);
-            }
-            catch {
-                print STDERR "Invalid notification URI $uri\n";
-                exit(1);
+            } catch {
+                Core::die("Invalid notification URI $uri");
             };
-            $notify->load_channel($uri);
+            my $scheme = $uri->scheme;
+            Core::die("Unknown notify type for $uri") unless $scheme;
+            my $notify_class  = $REGISTERED_MODULES{notify}->{$scheme};
+            Core::die("Unknown notify type for $uri") unless $notify_class;
+            eval "require $notify_class";
+
+            if( $@ ) {
+                if( $@ =~ /Can't locate \S+.pm/ ) {
+                    Core::die("Can not find module $notify_class for notify type $scheme");
+                } else {
+                    Core::die("Could not load module $notify_class for notify type $scheme: $@");
+                }
+            }
+            $notify->add_channel($notify_class->new($uri));
         }
         $args{notify} = $notify;
     }
@@ -129,14 +153,15 @@ sub steer {
     my $task = $self->task;
 
     # make sure it's a task we know about and can load
-    my $task_class = "Helm::Task::$task";
+    my $task_class = $REGISTERED_MODULES{task}->{$task};
+    $self->die("Unknown task $task") unless $task_class;
     eval "require $task_class";
 
     if( $@ ) {
-        if( $@ =~ /Can't locate Helm\/Task\/$task.pm/ ) {
-            $self->die("Unknown task $task");
+        if( $@ =~ /Can't locate \S+.pm/ ) {
+            $self->die("Can not find module $task_class for task $task");
         } else {
-            $self->die("Could not load module $task_class for $task");
+            $self->die("Could not load module $task_class for task $task");
         }
     }
 
@@ -194,9 +219,17 @@ sub load_configuration {
     # try to load the right config module
     my $scheme = $uri->scheme;
     $self->die("Unknown config type for $uri") unless $scheme;
-    my $loader_class  = "Helm::Conf::Loader::$scheme";
+    my $loader_class  = $REGISTERED_MODULES{configuration}->{$scheme};
+    $self->die("Unknown config type for $uri") unless $loader_class;
     eval "require $loader_class";
-    $self->die("Unknown config type: $scheme. Couldn't load $loader_class: $@") if $@;
+
+    if( $@ ) {
+        if( $@ =~ /Can't locate \S+.pm/ ) {
+            $self->die("Can not find module $loader_class for configuration type $scheme");
+        } else {
+            $self->die("Could not load module $loader_class for configuration type $scheme: $@");
+        }
+    }
 
     $self->notify->debug("Loading configuration for $uri from $loader_class");
     return $loader_class->load(uri => $uri, helm => $self);
@@ -285,6 +318,12 @@ sub die {
     my ($self, $msg) = @_;
     $self->notify->error($msg);
     exit(1);
+}
+
+sub register_module {
+    my ($class, $type, $key, $module) = @_;
+    Core::die("Unknown Helm module type '$type'!") unless exists $REGISTERED_MODULES{$type};
+    $REGISTERED_MODULES{$type}->{$key} = $module;
 }
 
 __PACKAGE__->meta->make_immutable;
