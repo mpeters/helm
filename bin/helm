@@ -293,7 +293,7 @@ for more details.
     --log irc://irc.company.com/tech
 
     # log messages to a file and to email address
-    --log file:///var/log/helm.log --log mailto://helm_log@company.com
+    --log file:///var/log/helm.log --log mailto:helm@company.com?from=helm@company.com
 
 Log messages are also sent to C<STDERR> unless the L<--quite> option
 is also passed.
@@ -436,13 +436,13 @@ using the user C<michael> and the password C<s3cr3t> you would have:
 
     --log irc://michael@irc.company.com/sysadmin?pass=s3cr3t
 
-=item mailto://
+=item mailto:
 
 Similar to Mail-To links in HTML documents, this just specifies an
 email address to log. Log messages aren't sent immediately, but
 are instead queued up to be sent once the command has been completed.
 
-    --log mailto://michael@company.com
+    --log mailto:michael@company.com?from=helm@company.com
 
 =back
 

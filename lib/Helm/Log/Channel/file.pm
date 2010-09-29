@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use Moose;
 use namespace::autoclean;
-use Term::ANSIColor qw(colored);
 use DateTime;
 
 extends 'Helm::Log::Channel';
@@ -13,10 +12,7 @@ sub initialize {
     my ($self, $helm) = @_;
 
     # file the file and open it for appending
-    my $uri = $self->uri;
-    my $file = $uri->opaque;
-    $file =~ s/^\/\///; # remove possible leading double slash
-
+    my $file = $self->uri->file;
     open(my $fh, '>>', $file) or $helm->die("Could not open file $file for appending: $@");
     $self->_fh($fh);
 }
@@ -32,15 +28,15 @@ sub finalize {
 }
 
 sub start_server {
-    my ($self, $server, $task) = @_;
+    my ($self, $server) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . qq( HELM SERVER $server - starting task "$task"\n);
+    print $fh $self->_timestamp . " BEGIN HELM TASK ON $server\n";
 }
 
 sub end_server {
-    my ($self, $server, $task) = @_;
+    my ($self, $server) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . qq( HELM SERVER $server - finished task "$task"\n);
+    print $fh $self->_timestamp . " END HELM TASK ON $server\n";
 }
 
 sub debug {

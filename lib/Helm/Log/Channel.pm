@@ -27,12 +27,12 @@ sub finalize {
 }
 
 sub start_server {
-    my ($self, $server, $task) = @_;
+    my ($self, $server) = @_;
     die "You must implement the start_server() method in your child class " . ref($self) . "!";
 }
 
 sub end_server {
-    my ($self, $server, $task) = @_;
+    my ($self, $server) = @_;
     die "You must implement the end_server() method in your child class " . ref($self) . "!";
 }
 

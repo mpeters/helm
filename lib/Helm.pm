@@ -63,8 +63,9 @@ my %REGISTERED_MODULES = (
     log => {
         console => 'Helm::Log::Channel::console',
         file    => 'Helm::Log::Channel::file',
+        mailto  => 'Helm::Log::Channel::email',
     },
-    configuration => {helm => 'Helm::Conf::Loader::helm',},
+    configuration => {helm => 'Helm::Conf::Loader::helm'},
 );
 
 around BUILDARGS => sub {
@@ -92,7 +93,9 @@ around BUILDARGS => sub {
             eval "require $log_class";
 
             if( $@ ) {
-                if( $@ =~ /Can't locate \S+.pm/ ) {
+                my $log_class_file = $log_class;
+                $log_class_file =~ s/::/\//g;
+                if( $@ =~ /Can't locate \Q$log_class_file\E\.pm/ ) {
                     CORE::die("Can not find module $log_class for log type $scheme");
                 } else {
                     CORE::die("Could not load module $log_class for log type $scheme: $@");
@@ -176,10 +179,13 @@ sub steer {
     $self->die("Cannot obtain a local helm lock. Is another helm process running?")
       if ($self->lock_type eq 'local' || $self->lock_type eq 'both') && !$self->_get_local_lock;
 
+    my @servers = @{$self->servers};
+    $self->log->debug("Running task $task on servers: " . join(', ', @servers) . "\n");
+
     # execute the task for each server
-    foreach my $server (@{$self->servers}) {
+    foreach my $server (@servers) {
         $self->_current_server($server);
-        $self->log->start_server($server, $task);
+        $self->log->start_server($server);
 
         my $port = $server->port || $self->default_port;
         my %ssh_args = (
@@ -202,7 +208,7 @@ sub steer {
             server => $server,
         );
 
-        $self->log->end_server($server, $task);
+        $self->log->end_server($server);
         $self->_release_remote_lock($ssh);
         sleep($self->sleep) if $self->sleep;
     }
