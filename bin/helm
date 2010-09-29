@@ -207,6 +207,7 @@ if( $dump_config ) {
 }
 
 die "No task given\n" if !$task;
+unshift(@logs, 'console') unless $quiet;
 try {
     my $helm = Helm->new(
         task       => $task       || '',
@@ -214,7 +215,7 @@ try {
         extra_options => \%extra_options,
         servers       => \@servers,
         roles         => \@roles,
-        log           => ['console', @logs],
+        log           => \@logs,
         log_level     => $log_level,
         sudo          => $sudo,
         lock_type     => $lock_type,
