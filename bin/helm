@@ -53,12 +53,10 @@ tasks to target a single machine, multiple machines which share the
 same role, or all machines in your cluster. Can also be extended to pull
 configuration from more complicated sources like LDAP, etc.
 
-=cut
+=item *
 
-#=item *
-#
-#Logging of each action performed to multiple channels: log
-#file, irc, email, etc.
+Logging of each action performed to multiple channels: console, log file,
+irc, email, etc.
 
 =item *
 

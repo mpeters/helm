@@ -32,6 +32,9 @@ DESCRIPTION
         same role, or all machines in your cluster. Can also be extended to
         pull configuration from more complicated sources like LDAP, etc.
 
+    *   Logging of each action performed to multiple channels: console, log
+        file, irc, email, etc.
+
     *   Interact with the remote processes via "STDIN", "STDOUT" and
         "STDERR".
 
@@ -96,7 +99,7 @@ OPTIONS
             --log irc://irc.company.com/tech
 
             # log messages to a file and to email address
-            --log file:///var/log/helm.log --log mailto://helm_log@company.com
+            --log file:///var/log/helm.log --log mailto:helm@company.com?from=helm@company.com
 
         Log messages are also sent to "STDERR" unless the --quite option is
         also passed.
@@ -222,12 +225,12 @@ LOG CHANNELS
 
             --log irc://michael@irc.company.com/sysadmin?pass=s3cr3t
 
-    mailto://
+    mailto:
         Similar to Mail-To links in HTML documents, this just specifies an
         email address to log. Log messages aren't sent immediately, but are
         instead queued up to be sent once the command has been completed.
 
-            --log mailto://michael@company.com
+            --log mailto:michael@company.com?from=helm@company.com
 
     Plugins can be written to load allow other log channels. This is done by
     subclassing Helm::Log::Channel and naming the module with the scheme of
