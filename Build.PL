@@ -19,6 +19,7 @@ my $build = Module::Build->new(
         'Carp'                  => '0',
         'Fcntl'                 => '0',
         'Term::ANSIColor'       => '3.00',
+        'DateTime'              => '0.63',
     },
     recommends         => {},
     build_requires     => {},

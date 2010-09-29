@@ -60,8 +60,11 @@ my %REGISTERED_MODULES = (
         run       => 'Helm::Task::run',
         exec      => 'Helm::Task::run',
     },
-    log        => {console => 'Helm::Log::Channel::console',},
-    configuration => {helm    => 'Helm::Conf::Loader::helm',},
+    log => {
+        console => 'Helm::Log::Channel::console',
+        file    => 'Helm::Log::Channel::file',
+    },
+    configuration => {helm => 'Helm::Conf::Loader::helm',},
 );
 
 around BUILDARGS => sub {
@@ -80,19 +83,19 @@ around BUILDARGS => sub {
             $uri = try {
                 URI->new($uri);
             } catch {
-                Core::die("Invalid log URI $uri");
+                CORE::die("Invalid log URI $uri");
             };
             my $scheme = $uri->scheme;
-            Core::die("Unknown log type for $uri") unless $scheme;
+            CORE::die("Unknown log type for $uri") unless $scheme;
             my $log_class  = $REGISTERED_MODULES{log}->{$scheme};
-            Core::die("Unknown log type for $uri") unless $log_class;
+            CORE::die("Unknown log type for $uri") unless $log_class;
             eval "require $log_class";
 
             if( $@ ) {
                 if( $@ =~ /Can't locate \S+.pm/ ) {
-                    Core::die("Can not find module $log_class for log type $scheme");
+                    CORE::die("Can not find module $log_class for log type $scheme");
                 } else {
-                    Core::die("Could not load module $log_class for log type $scheme: $@");
+                    CORE::die("Could not load module $log_class for log type $scheme: $@");
                 }
             }
             $log->add_channel($log_class->new($uri));
@@ -106,11 +109,12 @@ around BUILDARGS => sub {
 sub BUILD {
     my $self = shift;
 
+    $self->log->initialize($self);
+
     # create a config object from the config URI string (if it's not already a config object)
     if ($self->config_uri && !$self->config ) {
         $self->_config($self->load_configuration($self->config_uri));
     }
-    $self->log->initialize($self);
 
     # if we have servers let's turn them into Helm::Server objects, let's fully expand their names in case we're using abbreviations
     my @server_names = @{$self->servers};
@@ -175,7 +179,7 @@ sub steer {
     # execute the task for each server
     foreach my $server (@{$self->servers}) {
         $self->_current_server($server);
-        $self->log->start_server($server);
+        $self->log->start_server($server, $task);
 
         my $port = $server->port || $self->default_port;
         my %ssh_args = (
@@ -198,7 +202,7 @@ sub steer {
             server => $server,
         );
 
-        $self->log->end_server($server);
+        $self->log->end_server($server, $task);
         $self->_release_remote_lock($ssh);
         sleep($self->sleep) if $self->sleep;
     }
@@ -322,7 +326,7 @@ sub die {
 
 sub register_module {
     my ($class, $type, $key, $module) = @_;
-    Core::die("Unknown Helm module type '$type'!") unless exists $REGISTERED_MODULES{$type};
+    CORE::die("Unknown Helm module type '$type'!") unless exists $REGISTERED_MODULES{$type};
     $REGISTERED_MODULES{$type}->{$key} = $module;
 }
 

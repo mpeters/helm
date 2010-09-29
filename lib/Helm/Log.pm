@@ -35,13 +35,13 @@ sub finalize {
 }
 
 sub start_server {
-    my ($self, $server) = @_;
-    $_->start_server($server) foreach @{$self->channels};
+    my ($self, $server, $task) = @_;
+    $_->start_server($server, $task) foreach @{$self->channels};
 }
 
 sub end_server {
-    my ($self, $server) = @_;
-    $_->end_server($server) foreach @{$self->channels};
+    my ($self, $server, $task) = @_;
+    $_->end_server($server, $task) foreach @{$self->channels};
 }
 
 sub debug {

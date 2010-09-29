@@ -18,13 +18,13 @@ sub finalize {
 }
 
 sub start_server {
-    my ($self, $server) = @_;
+    my ($self, $server, $task) = @_;
     my $line = '-' x 70;
-    print STDERR colored("$line\n$server\n$line\n", 'blue');
+    print STDERR colored("$line\n$server ($task)\n$line\n", 'blue');
 }
 
 sub end_server {
-    my ($self, $server) = @_;
+    my ($self, $server, $task) = @_;
     print STDERR "\n";
 }
 
