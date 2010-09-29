@@ -1,21 +1,21 @@
-package Helm::Notify;
+package Helm::Log;
 use strict;
 use warnings;
 use Moose;
 use Moose::Util::TypeConstraints qw(enum);
 use namespace::autoclean;
 
-enum NOTIFY_LEVEL => qw(debug info warn error);
+enum LOG_LEVEL => qw(debug info warn error);
 has channels => (
     is      => 'ro',
     writer  => '_channels',
-    isa     => 'ArrayRef[Helm::Notify::Channel]',
+    isa     => 'ArrayRef[Helm::Log::Channel]',
     default => sub { [] },
 );
-has notify_level => (
+has log_level => (
     is      => 'ro',
-    writer  => '_notify_level',
-    isa     => 'NOTIFY_LEVEL',
+    writer  => '_log_level',
+    isa     => 'LOG_LEVEL',
     default => 'info',
 );
 
@@ -46,14 +46,14 @@ sub end_server {
 
 sub debug {
     my ($self, $msg) = @_;
-    if( $self->notify_level eq 'debug' ) {
+    if( $self->log_level eq 'debug' ) {
         $_->debug($msg) foreach @{$self->channels};
     }
 }
 
 sub info {
     my ($self, $msg) = @_;
-    if($self->notify_level eq 'debug' || $self->notify_level eq 'info') {
+    if($self->log_level eq 'debug' || $self->log_level eq 'info') {
         $_->info($msg) foreach @{$self->channels};
     }
 }

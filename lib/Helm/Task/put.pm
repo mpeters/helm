@@ -34,25 +34,29 @@ sub execute {
     my $dest = $sudo ? $self->unique_tmp_file : $remote;
 
     # send our file over there
-    $helm->notify->debug("Trying to scp local file ($local) to $server:$dest");
+    $helm->log->debug("Trying to scp local file ($local) to $server:$dest");
     $ssh->scp_put($local, $dest)
       || $helm->die("Can't scp file ($local) to server $server: " . $ssh->error);
-    $helm->notify->info("File $local copied to $server:$remote");
+    $helm->log->info("File $local copied to $server:$remote");
 
     if ($sudo) {
         # make it owned by the sudo user
+        $helm->log->debug("Changing owner of file ($file) to $sudo");
         $helm->run_remote_command(
             command     => "sudo chown $sudo.$sudo $dest",
             ssh         => $ssh,
             ssh_options => {tty => 1},
         );
+        $helm->log->debug("Owner of file ($file) changed to $sudo");
 
         # move the file over to the correct location
+        $helm->log->debug("Moving file from $dest to $remote");
         $helm->run_remote_command(
             command     => "sudo mv $dest $remote",
             ssh         => $ssh,
             ssh_options => {tty => 1},
         );
+        $helm->log->debug("Filed moved from $dest to $remote");
     }
 }
 

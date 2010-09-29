@@ -31,20 +31,26 @@ sub execute {
 
     # first get our patch file over there with a unique name so there are no collisions
     my $dest = $self->unique_tmp_file(suffix => '.patch');
+    $helm->log->debug("Trying to scp local file ($file) to $server:$dest");
     $ssh->scp_put($file, $dest) || $helm->die("Can't scp file ($file) to server $server: " . $ssh->error);
+    $helm->log->info("File $local copied to $server:$remote");
 
     # if we are using sudo, then let's make sure the file is owned by the other user
     if( $sudo ) {
+        $helm->log->debug("Changing owner of file ($file) to $sudo");
         $cmd = "sudo chown $sudo.$sudo $dest";
         $ssh->system($cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
+        $helm->log->debug("Owner of file ($file) changed to $sudo");
     }
 
     # now patch the file
+    # TODO - change this to use $helm->run_remote_command
     $cmd = "patch $target $dest";
     $cmd = "sudo -u $sudo $cmd" if $sudo;
     $ssh->system($cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
 
     # now remove our file so we leave the server clean
+    # TODO - change this to use $helm->run_remote_command
     $cmd = "rm -f $dest";
     $cmd = "sudo -u $sudo $cmd" if $sudo;
     $ssh->system($cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);

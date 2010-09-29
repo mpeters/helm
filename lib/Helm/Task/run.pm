@@ -25,7 +25,7 @@ sub execute {
         $command = "sudo -u $sudo $command";
     }
 
-    $helm->notify->info("Running command ($command) on server $server");
+    $helm->log->info("Running command ($command) on server $server");
     $ssh->system({tty => 1}, $command)
       || $helm->die("Can't execute command ($command) on server $server: " . $ssh->error);
 }

@@ -11,14 +11,14 @@ use File::HomeDir;
 use Net::OpenSSH;
 use Fcntl qw(:flock);
 use File::Basename qw(basename);
-use Helm::Notify;
+use Helm::Log;
 use Helm::Server;
 use Scalar::Util qw(blessed);
 
 our $VERION = 0.1;
 
-enum NOTIFY_LEVEL => qw(debug info warn error);
-enum LOCK_TYPE    => qw(none local remote both);
+enum LOG_LEVEL => qw(debug info warn error);
+enum LOCK_TYPE => qw(none local remote both);
 
 has task           => (is => 'ro', writer => '_task',           required => 1);
 has extra_options  => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
@@ -28,7 +28,7 @@ has sudo           => (is => 'ro', writer => '_sudo',           isa      => 'Str
 has lock_type      => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
 has sleep          => (is => 'ro', writer => '_sleep',          isa      => 'Num');
 has current_server => (is => 'ro', writer => '_current_server', isa      => 'Helm::Server');
-has notify         => (is => 'ro', writer => '_notify',         isa      => 'Helm::Notify');
+has log            => (is => 'ro', writer => '_log',            isa      => 'Helm::Log');
 has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
 has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
 has local_lock_handle  => (is => 'ro', writer => '_local_lock_handle',  isa => 'FileHandle|Undef');
@@ -44,10 +44,10 @@ has roles => (
     isa     => 'ArrayRef[Str]',
     default => sub { [] },
 );
-has notify_level => (
+has log_level => (
     is      => 'ro',
-    writer  => '_notify_level',
-    isa     => 'NOTIFY_LEVEL',
+    writer  => '_log_level',
+    isa     => 'LOG_LEVEL',
     default => 'info',
 );
 
@@ -60,7 +60,7 @@ my %REGISTERED_MODULES = (
         run       => 'Helm::Task::run',
         exec      => 'Helm::Task::run',
     },
-    notify        => {console => 'Helm::Notify::Channel::console',},
+    log        => {console => 'Helm::Log::Channel::console',},
     configuration => {helm    => 'Helm::Conf::Loader::helm',},
 );
 
@@ -69,35 +69,35 @@ around BUILDARGS => sub {
     my $class = shift;
     my %args  = (@_ == 1 && ref $_[0] && ref $_[0] eq 'HASH') ? %{$_[0]} : @_;
 
-    # allow "notifies" list of URIs to be passed into new() and then convert them into
-    # a Helm::Notify object with various Helm::Notify::Channel objects
-    if (my $notify_uris = delete $args{notifies}) {
-        my $notify =
-          Helm::Notify->new($args{notify_level} ? (notify_level => $args{notify_level}) : ());
-        foreach my $uri (@$notify_uris) {
+    # allow "log" list of URIs to be passed into new() and then convert them into
+    # a Helm::Log object with various Helm::Log::Channel objects
+    if (my $log_uris = delete $args{log}) {
+        my $log =
+          Helm::Log->new($args{log_level} ? (log_level => $args{log_level}) : ());
+        foreach my $uri (@$log_uris) {
             # console is a special case
             $uri = 'console://blah' if $uri eq 'console';
             $uri = try {
                 URI->new($uri);
             } catch {
-                Core::die("Invalid notification URI $uri");
+                Core::die("Invalid log URI $uri");
             };
             my $scheme = $uri->scheme;
-            Core::die("Unknown notify type for $uri") unless $scheme;
-            my $notify_class  = $REGISTERED_MODULES{notify}->{$scheme};
-            Core::die("Unknown notify type for $uri") unless $notify_class;
-            eval "require $notify_class";
+            Core::die("Unknown log type for $uri") unless $scheme;
+            my $log_class  = $REGISTERED_MODULES{log}->{$scheme};
+            Core::die("Unknown log type for $uri") unless $log_class;
+            eval "require $log_class";
 
             if( $@ ) {
                 if( $@ =~ /Can't locate \S+.pm/ ) {
-                    Core::die("Can not find module $notify_class for notify type $scheme");
+                    Core::die("Can not find module $log_class for log type $scheme");
                 } else {
-                    Core::die("Could not load module $notify_class for notify type $scheme: $@");
+                    Core::die("Could not load module $log_class for log type $scheme: $@");
                 }
             }
-            $notify->add_channel($notify_class->new($uri));
+            $log->add_channel($log_class->new($uri));
         }
-        $args{notify} = $notify;
+        $args{log} = $log;
     }
 
     return $class->$orig(%args);
@@ -110,7 +110,7 @@ sub BUILD {
     if ($self->config_uri && !$self->config ) {
         $self->_config($self->load_configuration($self->config_uri));
     }
-    $self->notify->initialize($self);
+    $self->log->initialize($self);
 
     # if we have servers let's turn them into Helm::Server objects, let's fully expand their names in case we're using abbreviations
     my @server_names = @{$self->servers};
@@ -175,7 +175,7 @@ sub steer {
     # execute the task for each server
     foreach my $server (@{$self->servers}) {
         $self->_current_server($server);
-        $self->notify->start_server($server);
+        $self->log->start_server($server);
 
         my $port = $server->port || $self->default_port;
         my %ssh_args = (
@@ -184,7 +184,7 @@ sub steer {
         );
         $ssh_args{port}    = $port if $port;
         $ssh_args{timeout} = $self->timeout      if $self->timeout;
-        $self->notify->debug("Setting up SSH connection to $server" . ($port ? ":$port" : ''));
+        $self->log->debug("Setting up SSH connection to $server" . ($port ? ":$port" : ''));
         my $ssh = Net::OpenSSH->new($server->name, %ssh_args);
         $ssh->error && $self->die("Can't ssh to $server: " . $ssh->error);
 
@@ -198,14 +198,14 @@ sub steer {
             server => $server,
         );
 
-        $self->notify->end_server($server);
+        $self->log->end_server($server);
         $self->_release_remote_lock($ssh);
         sleep($self->sleep) if $self->sleep;
     }
 
     # release the local lock
     $self->_release_local_lock();
-    $self->notify->finalize($self);
+    $self->log->finalize($self);
 }
 
 sub load_configuration {
@@ -231,20 +231,20 @@ sub load_configuration {
         }
     }
 
-    $self->notify->debug("Loading configuration for $uri from $loader_class");
+    $self->log->debug("Loading configuration for $uri from $loader_class");
     return $loader_class->load(uri => $uri, helm => $self);
 }
 
 sub _get_local_lock {
     my $self = shift;
-    $self->notify->debug("Trying to acquire global local helm lock");
+    $self->log->debug("Trying to acquire global local helm lock");
     # lock the file so nothing else can run at the same time
     my $lock_handle;
     my $lock_file = $self->_local_lock_file();
     open($lock_handle, '>', $lock_file) or $self->die("Can't open $lock_file for locking: $!");
     if (flock($lock_handle, LOCK_EX | LOCK_NB)) {
         $self->_local_lock_handle($lock_handle);
-        $self->notify->debug("Local helm lock obtained");
+        $self->log->debug("Local helm lock obtained");
         return 1;
     } else {
         return 0;
@@ -254,7 +254,7 @@ sub _get_local_lock {
 sub _release_local_lock {
     my $self = shift;
     if($self->local_lock_handle) {
-        $self->notify->debug("Releasing global local helm lock");
+        $self->log->debug("Releasing global local helm lock");
         close($self->local_lock_handle) 
     }
 }
@@ -267,7 +267,7 @@ sub _local_lock_file {
 sub _get_remote_lock {
     my ($self, $ssh) = @_;
     my $server = $self->current_server;
-    $self->notify->debug("Trying to obtain remote server lock for $server");
+    $self->log->debug("Trying to obtain remote server lock for $server");
 
     # make sure the lock file on the server doesn't exist
     my $lock_file = $self->_remote_lock_file();
@@ -282,7 +282,7 @@ sub _get_remote_lock {
     } else {
         # XXX - there's a race condition here, not sure what the right fix is though
         $self->run_remote_command(ssh => $ssh, command => "touch $lock_file");
-        $self->notify->debug("Remote server lock for $server obtained");
+        $self->log->debug("Remote server lock for $server obtained");
         return 1;
     }
 }
@@ -290,7 +290,7 @@ sub _get_remote_lock {
 sub _release_remote_lock {
     my ($self, $ssh) = @_;
     if( $self->lock_type eq 'remote' || $self->lock_type eq 'both' ) {
-        $self->notify->debug("Releasing remote server lock for " . $self->current_server);
+        $self->log->debug("Releasing remote server lock for " . $self->current_server);
         my $lock_file = $self->_remote_lock_file();
         $self->run_remote_command(ssh => $ssh, command => "rm -f $lock_file");
     }
@@ -309,14 +309,14 @@ sub run_remote_command {
     my $ssh_method  = $args{ssh_method} || 'system';
     my $server      = $args{server} || $self->current_server;
 
-    $self->notify->debug("Running remote command ($cmd) on server $server");
+    $self->log->debug("Running remote command ($cmd) on server $server");
     $ssh->$ssh_method($ssh_options, $cmd)
       or $self->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
 }
 
 sub die {
     my ($self, $msg) = @_;
-    $self->notify->error($msg);
+    $self->log->error($msg);
     exit(1);
 }
 

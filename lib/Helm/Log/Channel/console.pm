@@ -1,11 +1,11 @@
-package Helm::Notify::Channel::console;
+package Helm::Log::Channel::console;
 use strict;
 use warnings;
 use Moose;
 use namespace::autoclean;
 use Term::ANSIColor qw(colored);
 
-extends 'Helm::Notify::Channel';
+extends 'Helm::Log::Channel';
 
 sub initialize {
     my ($self, $helm) = @_;

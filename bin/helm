@@ -57,7 +57,7 @@ configuration from more complicated sources like LDAP, etc.
 
 #=item *
 #
-#Send notifications of each action performed to multiple channels: log
+#Logging of each action performed to multiple channels: log
 #file, irc, email, etc.
 
 =item *
@@ -84,9 +84,8 @@ my $sleep     = 0;
 my $port      = 22;
 my $timeout   = 30;
 my (
-    @servers, @roles,       $config_uri, @notifies, $notify_level,
-    @libs,    $no_rc_file,  $quiet,      $man,      $help,
-    $version, $dump_config, $debug,
+    @servers, @roles, $config_uri, @logs,    $log_level,   @libs, $no_rc_file,
+    $quiet,   $man,   $help,       $version, $dump_config, $debug,
 );
 
 # the main task (make sure not to grab an option by mistake)
@@ -111,24 +110,24 @@ unless (grep { $_ eq '--no-rc-file' } @ARGV) {
 
 Getopt::Long::Configure('pass_through');
 GetOptions(
-    'servers=s'                   => \@servers,
-    'roles=s'                     => \@roles,
-    'configuration|config=s'      => \$config_uri,
-    'notify-level|notify_level=s' => \$notify_level,
-    'notify=s'                    => \@notifies,
-    'load=s'                      => \@libs,
-    'sudo=s'                      => \$sudo,
-    'lock=s'                      => \$lock_type,
-    'sleep=i'                     => \$sleep,
-    'port=i'                      => \$port,
-    'timeout=i'                   => \$timeout,
-    'no-rc-file'                  => \$no_rc_file,
-    'quiet'                       => \$quiet,
-    'man'                         => \$man,
-    'h|help'                      => \$help,
-    'v|version'                   => \$version,
-    'dump-config|dump_config'     => \$dump_config,
-    'debug'                       => \$debug,
+    'servers=s'               => \@servers,
+    'roles=s'                 => \@roles,
+    'configuration|config=s'  => \$config_uri,
+    'log-level|log_level=s'   => \$log_level,
+    'log=s'                   => \@logs,
+    'load=s'                  => \@libs,
+    'sudo=s'                  => \$sudo,
+    'lock=s'                  => \$lock_type,
+    'sleep=i'                 => \$sleep,
+    'port=i'                  => \$port,
+    'timeout=i'               => \$timeout,
+    'no-rc-file'              => \$no_rc_file,
+    'quiet'                   => \$quiet,
+    'man'                     => \$man,
+    'h|help'                  => \$help,
+    'v|version'               => \$version,
+    'dump-config|dump_config' => \$dump_config,
+    'debug'                   => \$debug,
 ) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage(-verbose => 2) if $man;
@@ -146,14 +145,14 @@ if(@libs) {
 }
 
 if( $debug ) {
-    if(!$notify_level || $notify_level eq 'debug') {
-        $notify_level = 'debug';
+    if(!$log_level || $log_level eq 'debug') {
+        $log_level = 'debug';
     } else {
-        print STDERR "Can't specify --debug and --notify-level at the same time\n";
+        print STDERR "Can't specify --debug and --log-level at the same time\n";
         exit(1);
     }
-} elsif(!$notify_level) {
-    $notify_level = 'info';
+} elsif(!$log_level) {
+    $log_level = 'info';
 }
 
 # split servers and roles on commas if specified together
@@ -215,8 +214,8 @@ try {
         extra_options => \%extra_options,
         servers       => \@servers,
         roles         => \@roles,
-        notifies      => ['console', @notifies],
-        notify_level  => $notify_level,
+        log           => ['console', @logs],
+        log_level     => $log_level,
         sudo          => $sudo,
         lock_type     => $lock_type,
         sleep         => $sleep,
@@ -277,36 +276,36 @@ L<CONFIGURATION>).
 
     --config helm:///etc/helm.conf
 
-=item --notify
+=item --log-level
 
-Send notifications to a specific channel. Multiple channels can be
+The log level used. Can be one of C<debug>, C<info>, C<warn>,
+and C<error>.  Defaults to C<info>.
+
+=item --log
+
+Log messages to a specific channel. Multiple channels can be
 specified by specifying this option multiple times. The value of this
-option is the URI of the channel to be used.  See L<NOTIFICATION CHANNELS>
+option is the URI of the channel to be used.  See L<LOG CHANNELS>
 for more details.
 
-    # send notifications to a comany tech IRC channel 
-    --notify irc://irc.company.com/tech
+    # send log messages to a comany tech IRC channel 
+    --log irc://irc.company.com/tech
 
-    # send notifications to a log file and to email 
-    --notify file:///var/log/helm.log --notify mailto://notifications@company.com
+    # log messages to a file and to email address
+    --log file:///var/log/helm.log --log mailto://helm_log@company.com
 
-Notifications are also sent to C<STDERR> unless the L<--quite> option
+Log messages are also sent to C<STDERR> unless the L<--quite> option
 is also passed.
-
-=item --notify-level
-
-The notification level used. Can be one of C<debug>, C<info>, C<warn>,
-and C<error>.  Defaults to C<info>.
 
 =item --load
 
 Allows you to load other 3rd party plugin modules to extend C<helm>
-functionality. This could be to add more notification channels, different
+functionality. This could be to add more log channels, different
 configuration loading, etc. The value of this option is the full Perl
 module name of the plugin. This can be specified multiple times.
 
-    # load a hypothetical Twitter notification plugin 
-    --load Helm::Notify::Twitter
+    # load a hypothetical Twitter log plugin 
+    --load Helm::Log::Channel::Twitter
 
     # load hypothetical custom LDAP configuration and Ruby execution plugins 
     --load Helm::Conf::Loader::CompanyLDAP --load Helm::Conf::Task::Execute::Ruby
@@ -341,7 +340,7 @@ The timeout in seconds to give the ssh connections. Default is 30 seconds.
 
 =item --quiet
 
-Suppress the default notification to C<STDERR>
+Suppress the default logging to C<STDERR>
 
 =item --help
 
@@ -410,51 +409,49 @@ If you are having problems getting your configuration right, you can pass
 the L<--dump-config> option to tell C<helm> to display what it thinks things
 are configured to be.
 
-=head1 NOTIFICATION CHANNELS
+=head1 LOG CHANNELS
 
-C<helm> can be told to send various levels of notification data to
-different channels. By default we support a log file, IRC and email
-notifications. We also support various notification levels (see the
-L<--notify-level> option).
+C<helm> can be told to send various levels of log data to different
+channels. By default we support a log file, IRC and email logs. We also
+support various log levels (see the L<--log-level> option).
 
 You can specify which channel is used by giving a URI which indicates
-what type of channel and where to send the notification. The following
-URI schemes are supported:
+what type of channel and where to send the log. The following URI schemes
+are supported:
 
 =over
 
 =item file://
 
-This is basically a log file where notifications are immediately appended.
+This is basically a log file where messages are immediately appended.
 
-    --notify file:///var/log/helm.log
+    --log file:///var/log/helm.log
 
 =item irc://
 
-This is an IRC channel where notifications are immediately sent. For
-instance to send notifications to the C<sysadmin> IRC channel on
-C<irc.company.com> using the user C<michael> and the password C<s3cr3t>
-you would have:
+This is an IRC channel where messages are immediately sent. For example
+to send messages to the C<sysadmin> IRC channel on C<irc.company.com>
+using the user C<michael> and the password C<s3cr3t> you would have:
 
-    --notify irc://michael@irc.company.com/sysadmin?pass=s3cr3t
+    --log irc://michael@irc.company.com/sysadmin?pass=s3cr3t
 
 =item mailto://
 
 Similar to Mail-To links in HTML documents, this just specifies an
-email address to notify. Notification's aren't sent immediately, but
+email address to log. Log messages aren't sent immediately, but
 are instead queued up to be sent once the command has been completed.
 
-    --notify mailto://michael@company.com
+    --log mailto://michael@company.com
 
 =back
 
-Plugins can be written to load allow other notification channels. This
-is done by subclassing L<Helm::Notify::Channel> and naming the module
+Plugins can be written to load allow other log channels. This
+is done by subclassing L<Helm::Log::Channel> and naming the module
 with the scheme of the URI. So to add another channel for a URI like
 
-    --notify twitter://m_peters
+    --log twitter://m_peters
 
-You'd need to create a module named C<Helm::Notify::twitter>.
+You'd need to create a module named C<Helm::Log::Channel::twitter>.
 
 =head1 THE .helmrc FILE
 
@@ -464,11 +461,11 @@ multiple lines. Lines beginning with a # are ignored. A F<.helmrc>
 might look like this:
 
     # always log to a file 
-    --notify file:///var/log/helm.log
+    --log file:///var/log/helm.log
 
     # always load our custom plugins 
     --load Helm::Conf::Loader::CompanyLDAP 
-    --load Helm::Notify::CompanyYammer
+    --load Helm::Log::CompanyYammer
     --load Company::CustomHelmTasks
 
 C<helm> looks in your home directory or the current directory for

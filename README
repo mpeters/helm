@@ -80,36 +80,36 @@ OPTIONS
         Which resource to use for pulling cluster configuration information
         (see CONFIGURATION).
 
-            --config file:///etc/helm.conf
+            --config helm:///etc/helm.conf
 
-    --notify
-        Send notifications to a specific channel. Multiple channels can be
+    --log-level
+        The log level used. Can be one of "debug", "info", "warn", and
+        "error". Defaults to "info".
+
+    --log
+        Log messages to a specific channel. Multiple channels can be
         specified by specifying this option multiple times. The value of
-        this option is the URI of the channel to be used. See "NOTIFICATION
-        CHANNELS" for more details.
+        this option is the URI of the channel to be used. See "LOG CHANNELS"
+        for more details.
 
-            # send notifications to a comany tech IRC channel 
-            --notify irc://irc.company.com/tech
+            # send log messages to a comany tech IRC channel 
+            --log irc://irc.company.com/tech
 
-            # send notifications to a log file and to email 
-            --notify file:///var/log/helm.log --notify mailto://notifications@company.com
+            # log messages to a file and to email address
+            --log file:///var/log/helm.log --log mailto://helm_log@company.com
 
-        Notifications are also sent to "STDERR" unless the --quite option is
+        Log messages are also sent to "STDERR" unless the --quite option is
         also passed.
-
-    --notify-level
-        The notification level used. Can be one of "debug", "info", "warn",
-        and "error". Defaults to "info".
 
     --load
         Allows you to load other 3rd party plugin modules to extend "helm"
-        functionality. This could be to add more notification channels,
-        different configuration loading, etc. The value of this option is
-        the full Perl module name of the plugin. This can be specified
-        multiple times.
+        functionality. This could be to add more log channels, different
+        configuration loading, etc. The value of this option is the full
+        Perl module name of the plugin. This can be specified multiple
+        times.
 
-            # load a hypothetical Twitter notification plugin 
-            --load Helm::Notify::Twitter
+            # load a hypothetical Twitter log plugin 
+            --load Helm::Log::Channel::Twitter
 
             # load hypothetical custom LDAP configuration and Ruby execution plugins 
             --load Helm::Conf::Loader::CompanyLDAP --load Helm::Conf::Task::Execute::Ruby
@@ -128,11 +128,19 @@ OPTIONS
         "helm" processes can be running on either the local or remote
         servers. The value can be one of: "none", "local", "remote", "both".
 
-    --noenv
+    --no-rc-file
         Suppress the default loading of the ".helmrc file" file.
 
+    --port
+        The port to use for SSH on all of the remote servers. Defaults to
+        the standard (22).
+
+    --timeout
+        The timeout in seconds to give the ssh connections. Default is 30
+        seconds.
+
     --quiet
-        Suppress the default notification to "STDERR"
+        Suppress the default logging to "STDERR"
 
     --help
         Display the synopsis
@@ -151,10 +159,10 @@ CONFIGURATION
     By default, "helm" doesn't use a configuration file, but certain
     features require it (using roles, server abbreviations, etc) so it's
     best to have one. You can tell "helm" which configuration resource to
-    use by using the --config option. Currently, only the "file://" URI
+    use by using the --config option. Currently, only the "helm://" URI
     scheme is supported.
 
-        --config file:///etc/helm.conf
+        --config helm:///etc/helm.conf
 
     A configuration file will look something like this:
 
@@ -176,7 +184,7 @@ CONFIGURATION
     db, db_master, db_slave).
 
     "helm" currently just supports a single configuration resource format
-    ("file://"), but the internals are flexible enough that more formats
+    ("helm://"), but the internals are flexible enough that more formats
     could be supported in the future, including other configuration methods
     like LDAP, etc.
 
@@ -191,45 +199,43 @@ CONFIGURATION
     pass the --dump-config option to tell "helm" to display what it thinks
     things are configured to be.
 
-NOTIFICATION CHANNELS
-    "helm" can be told to send various levels of notification data to
-    different channels. By default we support a log file, IRC and email
-    notifications. We also support various notification levels (see the
-    --notify-level option).
+LOG CHANNELS
+    "helm" can be told to send various levels of log data to different
+    channels. By default we support a log file, IRC and email logs. We also
+    support various log levels (see the --log-level option).
 
     You can specify which channel is used by giving a URI which indicates
-    what type of channel and where to send the notification. The following
-    URI schemes are supported:
+    what type of channel and where to send the log. The following URI
+    schemes are supported:
 
     file://
-        This is basically a log file where notifications are immediately
+        This is basically a log file where messages are immediately
         appended.
 
-            --notify file:///var/log/helm.log
+            --log file:///var/log/helm.log
 
     irc://
-        This is an IRC channel where notifications are immediately sent. For
-        instance to send notifications to the "sysadmin" IRC channel on
+        This is an IRC channel where messages are immediately sent. For
+        example to send messages to the "sysadmin" IRC channel on
         "irc.company.com" using the user "michael" and the password "s3cr3t"
         you would have:
 
-            --notify irc://michael@irc.company.com/sysadmin?pass=s3cr3t
+            --log irc://michael@irc.company.com/sysadmin?pass=s3cr3t
 
     mailto://
         Similar to Mail-To links in HTML documents, this just specifies an
-        email address to notify. Notification's aren't sent immediately, but
-        are instead queued up to be sent once the command has been
-        completed.
+        email address to log. Log messages aren't sent immediately, but are
+        instead queued up to be sent once the command has been completed.
 
-            --notify mailto://michael@company.com
+            --log mailto://michael@company.com
 
-    Plugins can be written to load allow other notification channels. This
-    is done by subclassing Helm::Notify::Channel and naming the module with
-    the scheme of the URI. So to add another channel for a URI like
+    Plugins can be written to load allow other log channels. This is done by
+    subclassing Helm::Log::Channel and naming the module with the scheme of
+    the URI. So to add another channel for a URI like
 
-        --notify twitter://m_peters
+        --log twitter://m_peters
 
-    You'd need to create a module named "Helm::Notify::twitter".
+    You'd need to create a module named "Helm::Log::Channel::twitter".
 
 THE .helmrc FILE
     The .helmrc file contains command-line options that are prepended to the
@@ -238,18 +244,18 @@ THE .helmrc FILE
     this:
 
         # always log to a file 
-        --notify file:///var/log/helm.log
+        --log file:///var/log/helm.log
 
         # always load our custom plugins 
         --load Helm::Conf::Loader::CompanyLDAP 
-        --load Helm::Notify::CompanyYammer
+        --load Helm::Log::CompanyYammer
         --load Company::CustomHelmTasks
 
     "helm" looks in your home directory or the current directory for the
     .helmrc. You can specify another location with the "HELMRC" environment
     variable.
 
-    If --noenv is specified on the command line, the .helmrc file is
+    If --no-rc-file is specified on the command line, the .helmrc file is
     ignored.
 
 CAVEATS

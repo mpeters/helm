@@ -29,7 +29,7 @@ sub execute {
     # get our file over here with a new name
     $ssh->scp_get($remote, "$local.$server")
       || $helm->die("Can't scp file ($remote) from server $server: " . $ssh->error);
-    $helm->notify->info("File $server:$remote copied to $local.$server");
+    $helm->log->info("File $server:$remote copied to $local.$server");
 }
 
 __PACKAGE__->meta->make_immutable;

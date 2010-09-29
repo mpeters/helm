@@ -1,4 +1,4 @@
-package Helm::Notify::Channel;
+package Helm::Log::Channel;
 use strict;
 use warnings;
 use Moose;

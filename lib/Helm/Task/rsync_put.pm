@@ -30,7 +30,7 @@ sub execute {
     # send our file over there
     $ssh->rsync_put({archive => 1}, $local, $remote)
       || $helm->die("Can't rsync directory ($local) to server $server: " . $ssh->error);
-    $helm->notify->info("Directory $local rsync'ed to $server:$remote");
+    $helm->log->info("Directory $local rsync'ed to $server:$remote");
 }
 
 __PACKAGE__->meta->make_immutable;
