@@ -4,10 +4,17 @@ use warnings;
 use Moose;
 use namespace::autoclean;
 use DateTime;
-use Email::Simple;
-use Email::Simple::Creator;
-use Email::Sender::Simple;
-use Email::Valid;
+
+BEGIN {
+    eval { require 'Email::Simple' };
+    die "Could not load Email::Simple. It must be installed to use Helm's email logging" if $@;
+    eval { require 'Email::Simple::Creator' };
+    die "Could not load Email::Simple::Creator. It must be installed to use Helm's email logging" if $@;
+    eval { require 'Email::Sender::Simple' };
+    die "Could not load Email::Sender::Simple. It must be installed to use Helm's email logging" if $@;
+    eval { require 'Email::Valid' };
+    die "Could not load Email::Valid::Simple. It must be installed to use Helm's email logging" if $@;
+}
 
 extends 'Helm::Log::Channel';
 has task          => (is => 'ro', writer => '_task',          isa => 'Str');
@@ -17,8 +24,6 @@ has from          => (is => 'ro', writer => '_from',          isa => 'Str', defa
 
 sub initialize {
     my ($self, $helm) = @_;
-
-    my $options = $helm->extra_options;
 
     # file the file and open it for appending
     my $uri = $self->uri;
