@@ -19,6 +19,8 @@ extends 'Helm::Log::Channel';
 has pipe => (is => 'ro', writer => '_pipe');
 has child_pid => (is => 'ro', writer => '_child_pid', isa => 'Int');
 
+# TODO - handle signals from parent process
+
 my $TERMINATE = 'TERMINATE';
 
 sub initialize {
@@ -84,41 +86,6 @@ sub initialize {
     }
 }
 
-sub _irc_events {
-    my ($self, $pipe, %args) = @_;
-    my $irc  = AnyEvent::IRC::Client->new();
-    my $done = AnyEvent->condvar;
-
-    $irc->reg_cb(
-        join => sub {
-            my ($irc, $nick, $channel, $is_myself) = @_;
-            if ($is_myself && $channel eq $args{channel}) {
-                my $io_watcher;
-                $io_watcher = AnyEvent->io(
-                    fh => $pipe,
-                    poll => 'r',
-                    cb => sub {
-                        my $msg = <$pipe>;
-                        chomp($msg);
-                        if( $msg eq $TERMINATE ) {
-                            $done->send(); 
-                            undef $io_watcher;
-                        } elsif( $msg =~ /^MSG: (.*)/ ) {
-                            $irc->send_chan( $channel, PRIVMSG => ($channel, $1) );
-                        }
-                    }
-                );
-            }
-        }
-    );
-
-    $irc->connect($args{server}, $args{port}, {nick => $args{nick}});
-    $irc->send_srv(JOIN => ($args{channel}));
-    $done->recv;
-    $irc->disconnect();
-    exit(0);
-}
-
 sub finalize {
     my ($self, $helm) = @_;
     # send a terminate message to our child process and wait for it to exit
@@ -161,6 +128,41 @@ sub _say {
     my ($self, $msg) = @_;
     my $pipe = $self->pipe;
     print $pipe "MSG: $msg\n";
+}
+
+sub _irc_events {
+    my ($self, $pipe, %args) = @_;
+    my $irc  = AnyEvent::IRC::Client->new();
+    my $done = AnyEvent->condvar;
+
+    $irc->reg_cb(
+        join => sub {
+            my ($irc, $nick, $channel, $is_myself) = @_;
+            if ($is_myself && $channel eq $args{channel}) {
+                my $io_watcher;
+                $io_watcher = AnyEvent->io(
+                    fh => $pipe,
+                    poll => 'r',
+                    cb => sub {
+                        my $msg = <$pipe>;
+                        chomp($msg);
+                        if( $msg eq $TERMINATE ) {
+                            $done->send(); 
+                            undef $io_watcher;
+                        } elsif( $msg =~ /^MSG: (.*)/ ) {
+                            $irc->send_chan( $channel, PRIVMSG => ($channel, $1) );
+                        }
+                    }
+                );
+            }
+        }
+    );
+
+    $irc->connect($args{server}, $args{port}, {nick => $args{nick}});
+    $irc->send_srv(JOIN => ($args{channel}));
+    $done->recv;
+    $irc->disconnect();
+    exit(0);
 }
 
 __PACKAGE__->meta->make_immutable;
