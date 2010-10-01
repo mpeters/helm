@@ -288,7 +288,7 @@ option is the URI of the channel to be used.  See L<LOG CHANNELS>
 for more details.
 
     # send log messages to a comany tech IRC channel 
-    --log irc://irc.company.com/tech
+    --log irc://helm@irc.company.com/tech
 
     # log messages to a file and to email address
     --log file:///var/log/helm.log --log mailto:helm@company.com?from=helm@company.com

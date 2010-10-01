@@ -4,17 +4,8 @@ use warnings;
 use Moose;
 use namespace::autoclean;
 
-has uri => (is => 'ro', writer => '_uri', isa => 'URI');
-
-around BUILDARGS => sub {
-    my $orig  = shift;
-    my $class = shift;
-    if (@_ == 1 && !(ref $_[0] && ref $_[0] eq 'HASH')) {
-        return $class->$orig(uri => $_[0]);
-    } else {
-        return $class->$orig(@_);
-    }
-};
+has uri  => (is => 'ro', writer => '_uri',  isa => 'URI');
+has task => (is => 'ro', writer => '_task', isa => 'Str');
 
 sub initialize {
     my ($self, $helm) = @_;

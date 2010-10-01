@@ -6,18 +6,17 @@ use namespace::autoclean;
 use DateTime;
 
 BEGIN {
-    eval { require 'Email::Simple' };
+    eval { require Email::Simple };
     die "Could not load Email::Simple. It must be installed to use Helm's email logging" if $@;
-    eval { require 'Email::Simple::Creator' };
+    eval { require Email::Simple::Creator };
     die "Could not load Email::Simple::Creator. It must be installed to use Helm's email logging" if $@;
-    eval { require 'Email::Sender::Simple' };
+    eval { require Email::Sender::Simple };
     die "Could not load Email::Sender::Simple. It must be installed to use Helm's email logging" if $@;
-    eval { require 'Email::Valid' };
+    eval { require Email::Valid };
     die "Could not load Email::Valid::Simple. It must be installed to use Helm's email logging" if $@;
 }
 
 extends 'Helm::Log::Channel';
-has task          => (is => 'ro', writer => '_task',          isa => 'Str');
 has email_address => (is => 'ro', writer => '_email_address', isa => 'Str');
 has email_body    => (is => 'ro', writer => '_email_body',    isa => 'Str', default => '');
 has from          => (is => 'ro', writer => '_from',          isa => 'Str', default => '');
@@ -37,7 +36,6 @@ sub initialize {
 
     $helm->die(qq("$email" is not a valid email address)) unless Email::Valid->address($email);
     $self->_email_address($email);
-    $self->_task($helm->task);
     $self->_from($from);
 }
 

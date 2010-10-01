@@ -64,6 +64,7 @@ my %REGISTERED_MODULES = (
         console => 'Helm::Log::Channel::console',
         file    => 'Helm::Log::Channel::file',
         mailto  => 'Helm::Log::Channel::email',
+        irc     => 'Helm::Log::Channel::irc',
     },
     configuration => {helm => 'Helm::Conf::Loader::helm'},
 );
@@ -101,7 +102,7 @@ around BUILDARGS => sub {
                     CORE::die("Could not load module $log_class for log type $scheme: $@");
                 }
             }
-            $log->add_channel($log_class->new($uri));
+            $log->add_channel($log_class->new(uri => $uri, task => $args{task}));
         }
         $args{log} = $log;
     }
