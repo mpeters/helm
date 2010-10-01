@@ -2,7 +2,6 @@ package Helm::Task::run;
 use strict;
 use warnings;
 use Moose;
-use Net::OpenSSH;
 
 extends 'Helm::Task';
 
