@@ -111,11 +111,13 @@ OPTIONS
         Perl module name of the plugin. This can be specified multiple
         times.
 
-            # load a hypothetical Twitter log plugin 
-            --load Helm::Log::Channel::Twitter
+            # load a hypothetical Yammer log plugin 
+            --load Helm::Log::Channel::Yammer
 
-            # load hypothetical custom LDAP configuration and Ruby execution plugins 
-            --load Helm::Conf::Loader::CompanyLDAP --load Helm::Conf::Task::Execute::Ruby
+            # load hypothetical custom LDAP configuration and
+            --load Helm::Conf::Loader::CompanyLDAP
+
+        See "WRITING HELM PLUGINS" for more information.
 
     --sudo
         The user that should be used to perform the commands on the remote
@@ -195,8 +197,7 @@ CONFIGURATION
 
         --config ldap://ldap.company.com
 
-    You would need to write a Perl module named "Helm::Conf::Loader::ldap"
-    which subclasses "Helm::Conf::Loader".
+    See "WRITING HELM PLUGINS" for more information.
 
     If you are having problems getting your configuration right, you can
     pass the --dump-config option to tell "helm" to display what it thinks
@@ -232,13 +233,8 @@ LOG CHANNELS
 
             --log mailto:michael@company.com?from=helm@company.com
 
-    Plugins can be written to load allow other log channels. This is done by
-    subclassing Helm::Log::Channel and naming the module with the scheme of
-    the URI. So to add another channel for a URI like
-
-        --log twitter://m_peters
-
-    You'd need to create a module named "Helm::Log::Channel::twitter".
+    Plugins can be written to load allow other log channels. See "WRITING
+    HELM PLUGINS" for more information on how this is done.
 
 THE .helmrc FILE
     The .helmrc file contains command-line options that are prepended to the
@@ -260,6 +256,173 @@ THE .helmrc FILE
 
     If --no-rc-file is specified on the command line, the .helmrc file is
     ignored.
+
+WRITING HELM PLUGINS
+    Helm can be extended in many ways to make it more convenient for your
+    projects. Helm has 3 customization points where plugins can be written
+    and registered to interact: "task", "log" and "configuration". Using the
+    "--load" option, you can tell Helm about your custom or 3rd party Perl
+    modules that you would like to load. Each plugin module must register
+    itself with Helm along with the type of events it will handle using the
+    "Helm->register_module" method. For example, if I were creating a new
+    plugin module for a custom task named "spiffy" I might invoke Helm like:
+
+        helm spiffy --load MyCompany::Helm::Task::spiffy
+
+    And my Perl module might look something like this:
+
+        package MyCompany::Helm::Task::spiffy;
+        use strict;
+        use warnings;
+        use Helm;
+        use Moose;
+        extends 'Helm::Task';
+        Helm->register_module('task', spiffy => 'MyCompany::Helm::Task::spiffy')
+
+        sub validate {
+            my $self = shift;
+            # custom validation
+        }
+
+        sub execute {
+            my ($self, %args) = @_;
+            # do something spiffy
+        }
+
+        1;
+
+    Most likely you'd put the "--load" statment in your .helmrc file so you
+    wouldn't have to worry about it again. Now we'll get into the details of
+    what is expected of each type of plugin.
+
+  Task Plugins
+    A task plugin should inherit from Helm::Task and implement the following
+    methods:
+
+    validate
+        This method would perform any custom validation needed before the
+        task is executed against any servers. Normally this involves
+        validating the custom options this task might use. This method only
+        receives a single object, the task itself. As an example, lets say
+        you want a "--nifty" option to your "spiffy" plugin above:
+
+            helm spiffy --nifty foo
+
+        Then your validation method might look something like this:
+
+            sub validate {
+                my $self          = shift;
+                my $helm          = $self->helm;
+                my $extra_options = $helm->extra_options;
+                my $nifty         = $extra_options->{nifty};
+                $helm->die("You need to provide a --nifty option!") unless $nifty;
+                $helm->die("--nifty option ($nifty) is not a valid value") unless $nifty =~ /^fo+/;
+            }
+
+    execute
+        This is the meat of your task plugin and is where the work happens.
+        This method is called once for every server the task is being
+        executed against. It receives the following named arguments:
+
+        ssh A Net::OpenSSH object with an already open SSH connection to the
+            server in question.
+
+        server
+            A Helm::Server object for the currently executing task.
+
+        As long as your method doesn't die (or preferrably calls
+        "$helm->die()", then we will assume that all was fine and dandy in
+        the execution of the task.
+
+  Log Plugins
+    Log plugins can offer new channels for logging Helm output based on the
+    URI given to Helm. For instance, if you wanted to send SMS logging of
+    critical messages only, you might invoke helm with a logger like:
+
+        helm foo --log sms:+15105550101 --load MyCompany::Helm::Log::SMS
+
+    And then your SMS module might look something like
+
+        package MyCompany::Helm::Log::SMS;
+        use strict;
+        use warnings;
+        use Helm;
+        use Moose;
+        extends 'Helm::Log::Channel';
+        Helm->register_module('log', sms => 'MyCompany::Helm::Log::SMS');
+
+        sub initialize   {}
+        sub finalize     {}
+        sub start_server {}
+        sub end_server   {}
+        sub debug        {}
+        sub info         {}
+        sub warn         {}
+        sub error        { 
+            my ($self, $msg) = @_;
+            # send SMS message
+        }
+        1;
+
+    In this example, we don't care about anything except errors (since SMS
+    messages cost money and would get really annoying for anything with
+    frequency). Log plugins need to inherit from Helm::Log::Channel and
+    implement the following methods:
+
+    intialize
+    finalize
+    start_server
+    end_server
+    debug
+    info
+    warn
+    error
+
+   Configuration Plugins
+    Configuration plugins can implement new ways to load configuration data
+    about your servers based on the URI given to helm. For instance, if you
+    wanted to load the list of your servers and their roles from a company
+    LDAP server, you might invoke Helm like:
+
+        helm foo --config ldap://ldap.company.com --load MyCompany::Helm::Conf::ldap
+
+    Helm will look for the last module registed to handle the "ldap" scheme
+    of that url. That module might look like:
+
+        package MyCompany::Helm::Conf::ldap;
+        use strict;
+        use warnings;
+        use Helm;
+        use Moose;
+        extends 'Helm::Conf::Loader';
+        Helm->register_module('configuration', ldap => 'MyCompany::Helm::Conf::ldap')
+
+        sub load {
+            my ($self, %args) = @_;
+            my $uri = $args{uri};
+            # poke around in our LDAP server and create a list of Helm::Server objects
+            my @servers = ...;
+            # then return a Helm::Conf object
+            return Helm::Conf->new(servers => \@servers)
+        }
+
+        1;
+
+    A configuration loading plugin should inherit from Helm::Conf::Loader
+    and implement the following methods:
+
+    load
+        This method is the backbone of a configuration plugin. It receives
+        the following named arguments:
+
+        uri A URI object representing the URI passed on the command line to
+            be loaded by this configuration loader.
+
+        helm
+            The "Helm" object doing the loading.
+
+        This method must create a list of Helm::Server objects and use them
+        to return a Helm::Conf object.
 
 CAVEATS
     Multi-Platform
