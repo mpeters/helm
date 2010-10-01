@@ -96,7 +96,7 @@ OPTIONS
         for more details.
 
             # send log messages to a comany tech IRC channel 
-            --log irc://irc.company.com/tech
+            --log irc://helm@irc.company.com/tech
 
             # log messages to a file and to email address
             --log file:///var/log/helm.log --log mailto:helm@company.com?from=helm@company.com
@@ -273,4 +273,17 @@ CAVEATS
         but please be aware if you start using it that you'll probably want
         to follow future versions carefully to make sure you aren't bitten
         by API changes as thing are flushed out.
+
+TODO
+    In the not too distant future, we'd like to add the following features
+    to Helm:
+
+    * Help command and help docs for each task
+    * A way to set/read the remote environment variables for the user
+    logging in via SSH.
+    * Add an option to run tasks in parallel on different servers
+    * Add a capture option which allows stdout/stderr to be handled
+    differently
+    * Add a compare option which allows the output (stdout/stderr) to be
+    compared between servers in an intelligent manner
 
