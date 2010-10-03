@@ -293,7 +293,7 @@ for more details.
     # log messages to a file and to email address
     --log file:///var/log/helm.log --log mailto:helm@company.com?from=helm@company.com
 
-Log messages are also sent to C<STDERR> unless the L<--quite> option
+Log messages are also sent to C<STDERR> unless the L<--quiet> option
 is also passed.
 
 =item --load
@@ -314,7 +314,7 @@ See L<WRITING HELM PLUGINS> for more information.
 =item --sudo
 
 The user that should be used to perform the commands on the remote server.
-The actually SSH connection will be made using the current user's SSH keys
+The actual SSH connection will be made using the current user's SSH keys,
 but then once the connection is made to the remote server, it's sometimes
 useful for the commands to be run as a different user. We also try to make
 sure that things like file permissions (on tasks like C<put> and C<patch>)
@@ -622,7 +622,7 @@ LDAP server, you might invoke Helm like:
 
     helm foo --config ldap://ldap.company.com --load MyCompany::Helm::Conf::ldap
 
-Helm will look for the last module registed to handle the C<ldap> scheme
+Helm will look for the last module registered to handle the C<ldap> scheme
 of that url. That module might look like:
 
     package MyCompany::Helm::Conf::ldap;
