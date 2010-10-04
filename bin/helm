@@ -108,26 +108,26 @@ unless (grep { $_ eq '--no-rc-file' } @ARGV) {
 
 Getopt::Long::Configure('pass_through');
 GetOptions(
-    'servers=s'               => \@servers,
-    'roles=s'                 => \@roles,
-    'configuration|config=s'  => \$config_uri,
-    'log-level|log_level=s'   => \$log_level,
-    'log=s'                   => \@logs,
-    'load=s'                  => \@libs,
-    'sudo=s'                  => \$sudo,
-    'lock=s'                  => \$lock_type,
-    'sleep=i'                 => \$sleep,
-    'port=i'                  => \$port,
-    'timeout=i'               => \$timeout,
-    'no-rc-file'              => \$no_rc_file,
-    'quiet'                   => \$quiet,
-    'man'                     => \$man,
-    'h|help'                  => \$help,
-    'v|version'               => \$version,
-    'dump-config|dump_config' => \$dump_config,
-    'debug'                   => \$debug,
+    'servers=s'                                       => \@servers,
+    'roles=s'                                         => \@roles,
+    'configuration|config|conf=s'                     => \$config_uri,
+    'log-level|log_level=s'                           => \$log_level,
+    'log=s'                                           => \@logs,
+    'load=s'                                          => \@libs,
+    'sudo=s'                                          => \$sudo,
+    'lock=s'                                          => \$lock_type,
+    'sleep=i'                                         => \$sleep,
+    'port=i'                                          => \$port,
+    'timeout=i'                                       => \$timeout,
+    'no-rc-file'                                      => \$no_rc_file,
+    'quiet'                                           => \$quiet,
+    'man'                                             => \$man,
+    'h|help'                                          => \$help,
+    'v|version'                                       => \$version,
+    'dump-config|dump_config|config-dump|config_dump' => \$dump_config,
+    'debug'                                           => \$debug,
 ) or pod2usage(2);
-pod2usage(1) if $help;
+pod2usage(1) if $help || $task eq 'help';
 pod2usage(-verbose => 2) if $man;
 
 if( $version ) {
@@ -178,6 +178,29 @@ for(my $i=0; $i<=$#ARGV; $i++) {
     }
 }
 
+my $helm;
+try {
+    $helm = Helm->new(
+        task       => $task       || '',
+        config_uri => $config_uri || '',
+        extra_options => \%extra_options,
+        servers       => \@servers,
+        roles         => \@roles,
+        log           => \@logs,
+        log_level     => $log_level,
+        sudo          => $sudo,
+        lock_type     => $lock_type,
+        sleep         => $sleep,
+        default_port  => $port,
+        timeout       => $timeout,
+    );
+} catch {
+    # TODO - we can do this better than just filtering the error messages
+    my $err = $_;
+    $err =~ s/at (\S)+ line \d+$//;
+    die "Error: $err";
+};
+
 if( $dump_config ) {
     my $main_header = "=" x 70;
     my $section_header = '-' x 50;
@@ -190,7 +213,7 @@ if( $dump_config ) {
         
     die "Can't dump configuration without a --config option\n" unless $config_uri;
     my $config = try {
-        Helm->load_configuration($config_uri);
+        $helm->load_configuration($config_uri);
     } catch {
         warn "Error: $_\n";
         exit(1);
@@ -207,26 +230,12 @@ if( $dump_config ) {
 die "No task given\n" if !$task;
 unshift(@logs, 'console') unless $quiet;
 try {
-    my $helm = Helm->new(
-        task       => $task       || '',
-        config_uri => $config_uri || '',
-        extra_options => \%extra_options,
-        servers       => \@servers,
-        roles         => \@roles,
-        log           => \@logs,
-        log_level     => $log_level,
-        sudo          => $sudo,
-        lock_type     => $lock_type,
-        sleep         => $sleep,
-        default_port  => $port,
-        timeout       => $timeout,
-    );
     $helm->steer();
 } catch {
     my $err = $_;
     $err =~ s/at (\S)+ line \d+$//;
     die "Error: $err";
-}
+};
 
 =head1 OPTIONS
 
