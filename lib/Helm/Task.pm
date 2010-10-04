@@ -29,8 +29,8 @@ sub validate {
 }
 
 sub help {
-    my $self = shift;
-    return "No help documentation. Bug your implementers";
+    my ($self, $task) = @_;
+    return qq(No help documentation for "$task". Bug your implementers);
 }
 
 sub unique_tmp_file {

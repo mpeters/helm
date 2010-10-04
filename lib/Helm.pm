@@ -256,7 +256,7 @@ sub task_help {
     eval "require $task_class";
     die $@ if $@;
 
-    return $task_class->help();
+    return $task_class->help($task);
 }
 
 sub known_tasks {

@@ -16,17 +16,21 @@ sub validate {
 }
 
 sub help {
-    my $self = shift;
-    return <<END;
+    my ($self, $task) = @_;
+    my $text = <<END;
 Run a command on a remote server(s). This command can either
 be specified as the first positional argument:
 
-    helm run 'ls /'
+    helm $task 'ls /'
 
 Or as the named --command option:
 
-    helm run --command 'ls /'
+    helm $task --command 'ls /'
 END
+    if($task eq 'exec' ) {
+        $text .= qq(\nThis is just an alias for the "run" task);
+    }
+    return $text;
 }
 
 
