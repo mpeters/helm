@@ -3,6 +3,7 @@ NAME
 
 SYNOPSIS
         helm TASK [OPTIONS]
+        helm help tasks
         helm help [TASK]
 
         # patch the same file on all of the machines in your cluster 

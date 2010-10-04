@@ -15,6 +15,7 @@ helm - Easy server and cluster automation
 =head1 SYNOPSIS
 
     helm TASK [OPTIONS]
+    helm help tasks
     helm help [TASK]
 
     # patch the same file on all of the machines in your cluster 
@@ -250,8 +251,15 @@ try {
 
 sub show_help {
     if( $ARGV[0] ) {
-        my $help_text = Helm->task_help($ARGV[0]);
-        warn "$help_text\n";
+        if( $ARGV[0] eq 'tasks' ) {
+            warn "Known Helm tasks:\n";
+            foreach my $task (Helm->known_tasks) {
+                warn "  $task\n";
+            }
+        } else {
+            my $help_text = Helm->task_help($ARGV[0]);
+            warn "$help_text\n";
+        }
     } else {
         pod2usage(1);
     }
