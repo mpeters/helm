@@ -18,6 +18,21 @@ sub validate {
     $helm->die('Invalid option: file. File is not readable') unless -r $extra_options->{file};
 }
 
+sub help {
+    my $self = shift;
+    return <<END;
+Patch a file on a remote server(s) with a file from the local
+machine. Takes the following required options:
+
+  --file
+      The name of the patch file on the local machine.
+
+  --target
+      The full path of the file on the remote server(s) that will
+      be patched.
+END
+}
+
 sub execute {
     my ($self, %args) = @_;
     my $server  = $args{server};

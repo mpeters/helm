@@ -19,6 +19,20 @@ sub validate {
     $helm->die("Invalid option: local - Directory \"$local\" does not exist") unless -d $local;
 }
 
+sub help {
+    my $self = shift;
+    return <<END;
+Sync a local directory to a remote server(s) using rysnc. Takes the
+following required options:
+
+  --local
+      The name of the local directory being synced.
+
+  --remote
+      The full path to the directory on the remote server.
+END
+}
+
 sub execute {
     my ($self, %args) = @_;
     my $server  = $args{server};

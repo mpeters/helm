@@ -15,6 +15,21 @@ sub validate {
     $self->_command($cmd);
 }
 
+sub help {
+    my $self = shift;
+    return <<END;
+Run a command on a remote server(s). This command can either
+be specified as the first positional argument:
+
+    helm run 'ls /'
+
+Or as the named --command option:
+
+    helm run --command 'ls /'
+END
+}
+
+
 sub execute {
     my ($self, %args) = @_;
     my $server  = $args{server};

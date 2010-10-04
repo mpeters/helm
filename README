@@ -3,6 +3,7 @@ NAME
 
 SYNOPSIS
         helm TASK [OPTIONS]
+        helm help [TASK]
 
         # patch the same file on all of the machines in your cluster 
         helm patch --file my_fix.patch --target /opt/cool_system/do_stuff.pl
@@ -146,9 +147,6 @@ OPTIONS
 
     --quiet
         Suppress the default logging to "STDERR"
-
-    --help
-        Display the synopsis
 
     --man
         Display this documentation

@@ -28,6 +28,11 @@ sub validate {
     die "You must implement the validate method in your child class " . ref($self) . "!";
 }
 
+sub help {
+    my $self = shift;
+    return "No help documentation. Bug your implementers";
+}
+
 sub unique_tmp_file {
     my ($self, %args) = @_;
     my $file = catfile('', 'tmp', Data::UUID->new->create_str);

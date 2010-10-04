@@ -17,6 +17,22 @@ sub validate {
     $helm->die('Missing option: remote') unless $extra_options->{remote};
 }
 
+sub help {
+    my $self = shift;
+    return <<END;
+Retrieve a file from a remote server. Takes the following required
+options:
+
+  --local
+      The (base) name of the new file after it's copied to the local
+      machine.  This local name will have the server's name appended to it
+      to make it distinct from the files copied over from other servers.
+
+  --remote
+      The full path to the file on the remote server(s).
+END
+}
+
 sub execute {
     my ($self, %args) = @_;
     my $server  = $args{server};

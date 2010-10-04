@@ -20,6 +20,21 @@ sub validate {
     $helm->die("Invalid option: local - File \"$local\" is not readable") unless -r $local;
 }
 
+sub help {
+    my $self = shift;
+    return <<END;
+Put a local file onto the remote server(s). Takes the following required
+options:
+
+  --local
+      The name of the patch file on the local machine.
+
+  --remote
+      The full path that the file will occupy on the remote server(s).
+END
+}
+
+
 sub execute {
     my ($self, %args) = @_;
     my $server  = $args{server};
@@ -41,13 +56,13 @@ sub execute {
 
     if ($sudo) {
         # make it owned by the sudo user
-        $helm->log->debug("Changing owner of file ($file) to $sudo");
+        $helm->log->debug("Changing owner of file ($dest) to $sudo");
         $helm->run_remote_command(
             command     => "sudo chown $sudo.$sudo $dest",
             ssh         => $ssh,
             ssh_options => {tty => 1},
         );
-        $helm->log->debug("Owner of file ($file) changed to $sudo");
+        $helm->log->debug("Owner of file ($dest) changed to $sudo");
 
         # move the file over to the correct location
         $helm->log->debug("Moving file from $dest to $remote");

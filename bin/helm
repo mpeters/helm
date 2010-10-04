@@ -15,6 +15,7 @@ helm - Easy server and cluster automation
 =head1 SYNOPSIS
 
     helm TASK [OPTIONS]
+    helm help [TASK]
 
     # patch the same file on all of the machines in your cluster 
     helm patch --file my_fix.patch --target /opt/cool_system/do_stuff.pl
@@ -127,7 +128,7 @@ GetOptions(
     'dump-config|dump_config|config-dump|config_dump' => \$dump_config,
     'debug'                                           => \$debug,
 ) or pod2usage(2);
-pod2usage(1) if $help || $task eq 'help';
+show_help() if $help || $task eq 'help';
 pod2usage(-verbose => 2) if $man;
 
 if( $version ) {
@@ -247,6 +248,17 @@ try {
     die "Error: $err";
 };
 
+sub show_help {
+    if( $ARGV[0] ) {
+        my $help_text = Helm->task_help($ARGV[0]);
+        warn "$help_text\n";
+    } else {
+        pod2usage(1);
+    }
+    exit(0);
+}
+
+
 =head1 OPTIONS
 
 C<helm> has several options that can be specified for all commands. Any
@@ -361,10 +373,6 @@ The timeout in seconds to give the ssh connections. Default is 30 seconds.
 =item --quiet
 
 Suppress the default logging to C<STDERR>
-
-=item --help
-
-Display the synopsis
 
 =item --man
 

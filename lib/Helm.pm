@@ -248,6 +248,17 @@ sub load_configuration {
     return $loader_class->load(uri => $uri, helm => $self);
 }
 
+sub task_help {
+    my ($class, $task) = @_;
+    # make sure it's a task we know about and can load
+    my $task_class = $REGISTERED_MODULES{task}->{$task};
+    CORE::die("Unknown task $task") unless $task_class;
+    eval "require $task_class";
+    die $@ if $@;
+
+    return $task_class->help();
+}
+
 sub _get_local_lock {
     my $self = shift;
     $self->log->debug("Trying to acquire global local helm lock");
