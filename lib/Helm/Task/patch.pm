@@ -48,7 +48,7 @@ sub execute {
     my $dest = $self->unique_tmp_file(suffix => '.patch');
     $helm->log->debug("Trying to scp local file ($file) to $server:$dest");
     $ssh->scp_put($file, $dest) || $helm->die("Can't scp file ($file) to server $server: " . $ssh->error);
-    $helm->log->info("File $local copied to $server:$remote");
+    $helm->log->info("File $file copied to $server:$dest");
 
     # if we are using sudo, then let's make sure the file is owned by the other user
     if( $sudo ) {
