@@ -28,6 +28,24 @@ sub has_role {
     return 0;
 }
 
+sub expand_server_names {
+    my ($self, @names) = @_;
+    my @expanded;
+    foreach my $name (@names) {
+        if( $name =~ /\[(\d+)\-(\d+)\]/ ) {
+            my $start = $1;
+            my $end   = $2;
+            for my $i ($start .. $end) {
+                (my $new_name = $name) =~ s/\[\d+\-\d+\]/$i/;
+                push(@expanded, $new_name);
+            }
+        } else {
+            push(@expanded, $name);
+        }
+    }
+    return @expanded;
+}
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 

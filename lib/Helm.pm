@@ -125,7 +125,7 @@ sub BUILD {
     my @server_names = @{$self->servers};
     if(@server_names) {
         my @server_objs;
-        foreach my $server_name (@server_names) {
+        foreach my $server_name (Helm::Server->expand_server_names(@server_names)) {
             # if it's already a Helm::Server just keep it
             if( ref $server_name && blessed($server_name) && $server_name->isa('Helm::Server') ) {
                 push(@server_objs, $server_name);
@@ -138,6 +138,7 @@ sub BUILD {
                 push(@server_objs, Helm::Server->new(name => $server_name));
             }
         }
+        $self->_servers(\@server_objs);
     }
 
     # if we have any roles, then get the servers with those roles

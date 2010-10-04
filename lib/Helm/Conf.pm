@@ -20,7 +20,7 @@ sub get_server_by_abbrev {
         if ($server->name_length >= $name_length) {
             if (substr($server->name, 0, $name_length) eq $name) {
                 if (!$match || $name eq $server->name) {
-                    $match = $server->name;
+                    $match = $server;
                 } else {
                     $helm->die("Server abbreviation $name is ambiguous. Looks like $match and " . $self->name);
                 }

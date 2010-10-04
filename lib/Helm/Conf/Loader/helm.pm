@@ -39,24 +39,14 @@ sub load {
         my @roles       = $conf_block->get('Role');
         my $port        = $conf_block->get('Port');
 
-        # if server name is a range then expand it
-        if ($server_name =~ /\[(\d+)\-(\d+)\]/) {
-            my $start = $1;
-            my $end   = $2;
-            for my $i ($start .. $end) {
-                (my $new_name = $server_name) =~ s/\[\d+\-\d+\]/$i/;
-                $helm->die("Already seen server $new_name in $file. Duplicate entries not allowed.")
-                  if $seen_server_names{$new_name};
-                push(@servers,
-                    Helm::Server->new(name => $new_name, roles => \@roles, port => $port));
-                $seen_server_names{$new_name}++;
-            }
-        } else {
-            $helm->die("Already seen server $server_name in $file. Duplicate entries not allowed.")
-              if $seen_server_names{$server_name};
+        # expand server names in case they have ranges
+        my @names = Helm::Server->expand_server_names($server_name);
+        foreach my $name (@names) {
+            $helm->die("Already seen server $name in $file. Duplicate entries not allowed.")
+              if $seen_server_names{$name};
             push(@servers,
-                Helm::Server->new(name => $server_name, roles => \@roles, port => $port));
-            $seen_server_names{$server_name}++;
+                Helm::Server->new(name => $name, roles => \@roles, port => $port));
+            $seen_server_names{$name}++;
         }
     }
 
