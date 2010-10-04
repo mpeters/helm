@@ -4,13 +4,15 @@ use warnings;
 use Moose;
 
 extends 'Helm::Task';
+has command => (is => 'ro', writer => '_command', isa => 'Str');
 
 sub validate {
-    my $self          = shift;
-    my $helm          = $self->helm;
-    my $extra_options = $helm->extra_options;
+    my $self = shift;
+    my $helm = $self->helm;
+    my $cmd  = $helm->extra_options->{command} || $helm->extra_args->[0];
 
-    $helm->die('Missing option: command') unless $extra_options->{command};
+    $helm->die('Missing option: command') unless $cmd;
+    $self->_command($cmd);
 }
 
 sub execute {
@@ -18,9 +20,9 @@ sub execute {
     my $server  = $args{server};
     my $ssh     = $args{ssh};
     my $helm    = $self->helm;
-    my $command = $helm->extra_options->{command};
+    my $command = $self->command;
 
-    if( my $sudo = $helm->sudo ) {
+    if (my $sudo = $helm->sudo) {
         $command = "sudo -u $sudo $command";
     }
 

@@ -22,6 +22,7 @@ enum LOCK_TYPE => qw(none local remote both);
 
 has task           => (is => 'ro', writer => '_task',           required => 1);
 has extra_options  => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
+has extra_args     => (is => 'ro', isa    => 'ArrayRef',        default  => sub { [] });
 has config_uri     => (is => 'ro', writer => '_config_uri',     isa      => 'Str');
 has config         => (is => 'ro', writer => '_config',         isa      => 'Helm::Conf');
 has sudo           => (is => 'ro', writer => '_sudo',           isa      => 'Str');

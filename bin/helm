@@ -161,9 +161,16 @@ if(@roles) {
     @roles = map { split(/\s*,\s*/, $_) } @roles;
 }
 
-# look through @ARGV and get anything that looks like an option (starts with "--")
-# and save it to pass through the actual task
-my %extra_options;
+# look through @ARGV to save any extra junk for task specific
+# things. Process according to these rules:
+# 1) If we see something that starts with a '--' then assume it's a named
+#   option. If the next thing also starts with a '--' then assume that
+#   the value of this option is "1". Else assume the next thing is it's value.
+#   Stored named options and their values in %extra_options.
+# 2) If we see something that doesn't start with a '--' and isn't preceded
+#   by something with a '--' then assume it's a positional argument. Store
+#   positional arguments in @extra_args.
+my (%extra_options, @extra_args);
 for(my $i=0; $i<=$#ARGV; $i++) {
     my $option = $ARGV[$i];
     if( $option =~ /^-+(.*)/ ) {
@@ -175,15 +182,19 @@ for(my $i=0; $i<=$#ARGV; $i++) {
             $extra_options{$option} = $val;
             $i++;
         }
+    } else {
+        push(@extra_args, $option);
     }
 }
 
 my $helm;
+unshift(@logs, 'console') unless $quiet;
 try {
     $helm = Helm->new(
         task       => $task       || '',
         config_uri => $config_uri || '',
         extra_options => \%extra_options,
+        extra_args    => \@extra_args,
         servers       => \@servers,
         roles         => \@roles,
         log           => \@logs,
@@ -228,7 +239,6 @@ if( $dump_config ) {
 }
 
 die "No task given\n" if !$task;
-unshift(@logs, 'console') unless $quiet;
 try {
     $helm->steer();
 } catch {
