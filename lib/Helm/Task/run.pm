@@ -37,13 +37,7 @@ sub execute {
     my $helm    = $self->helm;
     my $command = $self->command;
 
-    if (my $sudo = $helm->sudo) {
-        $command = "sudo -u $sudo $command";
-    }
-
-    $helm->log->info("Running command ($command) on server $server");
-    $ssh->system({tty => 1}, $command)
-      || $helm->die("Can't execute command ($command) on server $server: " . $ssh->error);
+    $helm->run_remote_command(command => $command, ssh => $ssh);
 }
 
 __PACKAGE__->meta->make_immutable;

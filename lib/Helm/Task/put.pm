@@ -58,9 +58,10 @@ sub execute {
         # make it owned by the sudo user
         $helm->log->debug("Changing owner of file ($dest) to $sudo");
         $helm->run_remote_command(
-            command     => "sudo chown $sudo.$sudo $dest",
+            command     => "sudo chown $sudo $dest",
             ssh         => $ssh,
             ssh_options => {tty => 1},
+            no_sudo     => 1,
         );
         $helm->log->debug("Owner of file ($dest) changed to $sudo");
 
@@ -70,6 +71,7 @@ sub execute {
             command     => "sudo mv $dest $remote",
             ssh         => $ssh,
             ssh_options => {tty => 1},
+            no_sudo     => 1,
         );
         $helm->log->debug("Filed moved from $dest to $remote");
     }

@@ -337,6 +337,12 @@ sub run_remote_command {
     my $cmd         = $args{command};
     my $ssh_method  = $args{ssh_method} || 'system';
     my $server      = $args{server} || $self->current_server;
+    my $sudo        = $self->sudo;
+
+    if( $sudo && !$args{no_sudo}) {
+        $cmd = "sudo -u $sudo $cmd";
+        $ssh_options->{tty} = 1;
+    }
 
     $self->log->debug("Running remote command ($cmd) on server $server");
     $ssh->$ssh_method($ssh_options, $cmd)

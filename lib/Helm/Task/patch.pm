@@ -53,22 +53,18 @@ sub execute {
     # if we are using sudo, then let's make sure the file is owned by the other user
     if( $sudo ) {
         $helm->log->debug("Changing owner of file ($file) to $sudo");
-        $cmd = "sudo chown $sudo.$sudo $dest";
+        $cmd = "sudo chown $sudo $dest";
         $ssh->system($cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
         $helm->log->debug("Owner of file ($file) changed to $sudo");
     }
 
     # now patch the file
-    # TODO - change this to use $helm->run_remote_command
     $cmd = "patch $target $dest";
-    $cmd = "sudo -u $sudo $cmd" if $sudo;
-    $ssh->system($cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
+    $helm->run_remote_command(command => $cmd, ssh => $ssh);
 
     # now remove our file so we leave the server clean
-    # TODO - change this to use $helm->run_remote_command
     $cmd = "rm -f $dest";
-    $cmd = "sudo -u $sudo $cmd" if $sudo;
-    $ssh->system($cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
+    $helm->run_remote_command(command => $cmd, ssh => $ssh);
 }
 
 __PACKAGE__->meta->make_immutable;
