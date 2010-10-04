@@ -129,7 +129,6 @@ GetOptions(
     'dump-config|dump_config|config-dump|config_dump' => \$dump_config,
     'debug'                                           => \$debug,
 ) or pod2usage(2);
-show_help() if $help || $task eq 'help';
 pod2usage(-verbose => 2) if $man;
 
 if( $version ) {
@@ -188,6 +187,8 @@ for(my $i=0; $i<=$#ARGV; $i++) {
         push(@extra_args, $option);
     }
 }
+
+show_help() if $help || $task eq 'help';
 
 my $helm;
 unshift(@logs, 'console') unless $quiet;
