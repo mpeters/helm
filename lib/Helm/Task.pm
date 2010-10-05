@@ -8,16 +8,6 @@ use File::Spec::Functions qw(catfile);
 
 has helm => (is => 'ro', writer => '_helm', isa => 'Helm');
 
-around BUILDARGS => sub {
-    my $orig  = shift;
-    my $class = shift;
-    if (@_ == 1 && !(ref $_[0] && ref $_[0] eq 'HASH')) {
-        return $class->$orig(helm => $_[0]);
-    } else {
-        return $class->$orig(@_);
-    }
-};
-
 sub execute {
     my ($self, %args) = @_;
     die "You must implement the execute method in your child class " . ref($self) . "!";

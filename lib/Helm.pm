@@ -175,7 +175,7 @@ sub steer {
         }
     }
 
-    my $task_obj = $task_class->new($self);
+    my $task_obj = $task_class->new(helm => $self);
     $task_obj->validate();
 
     # make sure have a local lock if we need it
