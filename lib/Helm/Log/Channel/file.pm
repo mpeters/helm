@@ -15,6 +15,8 @@ sub initialize {
     my $file = $self->uri->file;
     open(my $fh, '>>', $file) or $helm->die("Could not open file $file for appending: $@");
     $self->_fh($fh);
+
+    print $fh $self->_timestamp . " HELM execution started by " . getlogin . "\n";
 }
 
 sub finalize {
@@ -30,13 +32,13 @@ sub finalize {
 sub start_server {
     my ($self, $server) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " BEGIN HELM TASK ON $server\n";
+    print $fh $self->_timestamp . " BEGIN TASK ON $server\n";
 }
 
 sub end_server {
     my ($self, $server) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " END HELM TASK ON $server\n";
+    print $fh $self->_timestamp . " END TASK ON $server\n";
 }
 
 sub debug {

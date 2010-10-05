@@ -138,6 +138,9 @@ sub _irc_events {
     $irc->reg_cb(
         join => sub {
             my ($irc, $nick, $channel, $is_myself) = @_;
+            # send the initial message
+            $irc->send_chan($channel,
+                PRIVMSG => ($channel, "Helm execution started by " . getlogin));
             if ($is_myself && $channel eq $args{channel}) {
                 my $io_watcher;
                 $io_watcher = AnyEvent->io(

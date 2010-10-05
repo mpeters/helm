@@ -7,9 +7,19 @@ use Term::ANSIColor qw(colored);
 
 extends 'Helm::Log::Channel';
 
+my $LINE = '-' x 70;
+
 sub initialize {
     my ($self, $helm) = @_;
     # nothing to do here
+    print STDERR colored("$LINE\n", 'blue');
+    print STDERR colored(
+        '['
+          . DateTime->now->strftime('%a %b %d %H:%M:%S %Y')
+          . '] Helm execution started by '
+          . getlogin . "\n",
+        'bold blue'
+    );
 }
 
 sub finalize {
@@ -19,8 +29,7 @@ sub finalize {
 
 sub start_server {
     my ($self, $server) = @_;
-    my $line = '-' x 70;
-    print STDERR colored("$line\n$server\n$line\n", 'blue');
+    print STDERR colored("$LINE\n$server\n$LINE\n", 'blue');
 }
 
 sub end_server {
