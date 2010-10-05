@@ -440,9 +440,6 @@ TODO
     In the not too distant future, we'd like to add the following features
     to Helm:
 
-    * Help command and help docs for each task
-    * A way to set/read the remote environment variables for the user
-    logging in via SSH.
     * Add an option to run tasks in parallel on different servers, and to
     control how many parallel connections are running at a time.
     * Add a capture option which allows stdout/stderr to be handled

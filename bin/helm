@@ -735,10 +735,6 @@ to Helm:
 
 =over
 
-=item * Help command and help docs for each task
-
-=item * A way to set/read the remote environment variables for the user logging in via SSH.
-
 =item * Add an option to run tasks in parallel on different servers, and to control how many parallel connections are running at a time.
 
 =item * Add a capture option which allows stdout/stderr to be handled differently
