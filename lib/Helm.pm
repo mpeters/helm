@@ -45,6 +45,18 @@ has roles => (
     isa     => 'ArrayRef[Str]',
     default => sub { [] },
 );
+has exclude_servers    => (
+    is      => 'ro',
+    writer  => '_exclude_servers',
+    isa     => 'ArrayRef',
+    default => sub { [] },
+);
+has exclude_roles => (
+    is      => 'ro',
+    writer  => '_exclude_roles',
+    isa     => 'ArrayRef[Str]',
+    default => sub { [] },
+);
 has log_level => (
     is      => 'ro',
     writer  => '_log_level',
@@ -121,11 +133,25 @@ sub BUILD {
         $self->_config($self->load_configuration($self->config_uri));
     }
 
+    # do we have any servers we're excluding?
+    my %excludes;
+    if( my @excludes = @{$self->exclude_servers} ) {
+        foreach my $server_name (Helm::Server->expand_server_names(@excludes)) {
+            if( my $config = $self->config ) {
+                if( my $server = $config->get_server_by_abbrev($server_name, $self) ) {
+                    $server_name = $server->name;
+                }
+            }
+            $excludes{$server_name} = 1;
+        }
+    }
+
     # if we have servers let's turn them into Helm::Server objects, let's fully expand their names in case we're using abbreviations
     my @server_names = @{$self->servers};
     if(@server_names) {
         my @server_objs;
         foreach my $server_name (Helm::Server->expand_server_names(@server_names)) {
+            next if $excludes{$server_name};
             # if it's already a Helm::Server just keep it
             if( ref $server_name && blessed($server_name) && $server_name->isa('Helm::Server') ) {
                 push(@server_objs, $server_name);
@@ -141,12 +167,15 @@ sub BUILD {
         $self->_servers(\@server_objs);
     }
 
+    # are we excluding any roles?
+
     # if we have any roles, then get the servers with those roles
     my @roles = @{$self->roles};
+    my @exclude_roles = @{$self->exclude_roles};
     if( @roles ) {
         $self->die("Can't specify roles without a config") if !$self->config;
         my @servers = @{$self->servers};
-        push(@servers, $self->config->get_servers_by_roles(@roles));
+        push(@servers, $self->config->get_servers_by_roles(\@roles, \@exclude_roles));
         $self->_servers(\@servers);
     }
     
@@ -154,7 +183,13 @@ sub BUILD {
     my @servers = @{$self->servers};
     if(!@servers) {
         $self->die("You must specify servers if you don't have a config") if !$self->config;
-        $self->_servers($self->config->servers);
+        
+        # exclude any servers we don't want
+        @servers =
+          grep { !@exclude_roles || !$_->has_role(@exclude_roles) }
+          grep { !$excludes{$_->name} } @{$self->config->servers};
+        
+        $self->_servers(\@servers);
     }
 }
 

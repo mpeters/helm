@@ -84,8 +84,9 @@ my $sleep     = 0;
 my $port      = 22;
 my $timeout   = 30;
 my (
-    @servers, @roles, $config_uri, @logs,    $log_level,   @libs, $no_rc_file,
-    $quiet,   $man,   $help,       $version, $dump_config, $debug,
+    @servers, @exclude_servers, @roles,   @exclude_roles, $config_uri,
+    @logs,    $log_level,       @libs,    $no_rc_file,    $quiet,
+    $man,     $help,            $version, $dump_config,   $debug,
 );
 
 # the main task (make sure not to grab an option by mistake)
@@ -111,7 +112,9 @@ unless (grep { $_ eq '--no-rc-file' } @ARGV) {
 Getopt::Long::Configure('pass_through');
 GetOptions(
     'servers=s'                                       => \@servers,
+    'exclude|exclude_servers|exclude-servers=s'       => \@exclude_servers,
     'roles=s'                                         => \@roles,
+    'exclude_roles|exclude-roles=s'                   => \@exclude_roles,
     'configuration|config|conf=s'                     => \$config_uri,
     'log-level|log_level=s'                           => \$log_level,
     'log=s'                                           => \@logs,
@@ -158,8 +161,14 @@ if( $debug ) {
 if(@servers) {
     @servers = map { split(/\s*,\s*/, $_) } @servers;
 }
+if(@exclude_servers) {
+    @exclude_servers = map { split(/\s*,\s*/, $_) } @exclude_servers;
+}
 if(@roles) {
     @roles = map { split(/\s*,\s*/, $_) } @roles;
+}
+if(@exclude_roles) {
+    @exclude_roles = map { split(/\s*,\s*/, $_) } @exclude_roles;
 }
 
 # look through @ARGV to save any extra junk for task specific
@@ -196,17 +205,19 @@ try {
     $helm = Helm->new(
         task       => $task       || '',
         config_uri => $config_uri || '',
-        extra_options => \%extra_options,
-        extra_args    => \@extra_args,
-        servers       => \@servers,
-        roles         => \@roles,
-        log           => \@logs,
-        log_level     => $log_level,
-        sudo          => $sudo,
-        lock_type     => $lock_type,
-        sleep         => $sleep,
-        default_port  => $port,
-        timeout       => $timeout,
+        extra_options   => \%extra_options,
+        extra_args      => \@extra_args,
+        servers         => \@servers,
+        roles           => \@roles,
+        exclude_servers => \@exclude_servers,
+        exclude_roles   => \@exclude_roles,
+        log             => \@logs,
+        log_level       => $log_level,
+        sudo            => $sudo,
+        lock_type       => $lock_type,
+        sleep           => $sleep,
+        default_port    => $port,
+        timeout         => $timeout,
     );
 } catch {
     # TODO - we can do this better than just filtering the error messages
@@ -290,7 +301,10 @@ on all servers (as defined in your L<CONFIGURATION>).
     --servers 192.168.0.23,192.168.0.24,web1.company.com
 
     # using abbreviations from config file 
-    --servers web1,web2,web3
+    --servers web1,db2
+
+    # using abbreviations from config file and ranges
+    --servers web[1-3],db[1-2]
 
 =item --roles
 
@@ -307,6 +321,31 @@ on all servers (as defined in your L<CONFIGURATION>).
 
     # multiple roles
     --roles web,cache
+
+=item --exclude
+
+Specifically exclude servers from the list to be used. This can be combined
+with both C<--servers> and C<--roles> and even by itself to exclude certain
+servers from the list of all servers as defined in your L<CONFIGURATION>).
+
+    # combined with --servers
+    --servers web[1-10] --exclude web3
+
+    # combined with --roles, using ranges
+    --roles web --exclude web[4-5]
+
+=item --exclude-roles
+
+Specifically exclude servers with certain roles from the list to be
+used. This can be combined with both C<--servers> and C<--roles> and
+even by itself to exclude certain servers from the list of all servers
+as defined in your L<CONFIGURATION>).
+
+    # combined with --servers: any web[1-10] servers that aren't also caches
+    --servers web[1-10] --exclude-roles cache
+
+    # combined with --roles: any web servers that aren't also proxies
+    --roles web --exclude-roles proxy
 
 =item --config
 
@@ -740,7 +779,5 @@ to Helm:
 =item * Add a capture option which allows stdout/stderr to be handled differently
 
 =item * Add a compare option which allows the output (stdout/stderr) to be compared between servers in an intelligent manner
-
-=item * Add an option to exclude some servers
 
 =back

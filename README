@@ -64,7 +64,10 @@ OPTIONS
             --servers 192.168.0.23,192.168.0.24,web1.company.com
 
             # using abbreviations from config file 
-            --servers web1,web2,web3
+            --servers web1,db2
+
+            # using abbreviations from config file and ranges
+            --servers web[1-3],db[1-2]
 
     --roles
         Instead of specifying the servers explicitly, you can instead
@@ -80,6 +83,30 @@ OPTIONS
 
             # multiple roles
             --roles web,cache
+
+    --exclude
+        Specifically exclude servers from the list to be used. This can be
+        combined with both "--servers" and "--roles" and even by itself to
+        exclude certain servers from the list of all servers as defined in
+        your CONFIGURATION).
+
+            # combined with --servers
+            --servers web[1-10] --exclude web3
+
+            # combined with --roles, using ranges
+            --roles web --exclude web[4-5]
+
+    --exclude-roles
+        Specifically exclude servers with certain roles from the list to be
+        used. This can be combined with both "--servers" and "--roles" and
+        even by itself to exclude certain servers from the list of all
+        servers as defined in your CONFIGURATION).
+
+            # combined with --servers: any web[1-10] servers that aren't also caches
+            --servers web[1-10] --exclude-roles cache
+
+            # combined with --roles: any web servers that aren't also proxies
+            --roles web --exclude-roles proxy
 
     --config
         Which resource to use for pulling cluster configuration information
@@ -446,5 +473,4 @@ TODO
     differently
     * Add a compare option which allows the output (stdout/stderr) to be
     compared between servers in an intelligent manner
-    * Add an option to exclude some servers
 

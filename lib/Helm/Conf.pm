@@ -8,8 +8,10 @@ use Helm::Server;
 has servers => (is => 'ro', writer => '_servers', isa => 'ArrayRef[Helm::Server]');
 
 sub get_servers_by_roles {
-    my ($self, @roles) = @_;
-    return grep { $_->has_role(@roles) } @{$self->servers};
+    my ($self, $roles, $exclude) = @_;
+    $exclude ||= [];
+    return
+      grep { $_->has_role(@$roles) && (!@$exclude || !$_->has_role(@$exclude)) } @{$self->servers};
 }
 
 sub get_server_by_abbrev {
