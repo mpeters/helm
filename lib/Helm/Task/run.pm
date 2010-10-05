@@ -27,9 +27,7 @@ Or as the named --command option:
 
     helm $task --command 'ls /'
 END
-    if($task eq 'exec' ) {
-        $text .= qq(\nThis is just an alias for the "run" task);
-    }
+    $text .= qq(\nThis is just an alias for the "run" task) if $task eq 'exec';
     return $text;
 }
 
@@ -41,7 +39,8 @@ sub execute {
     my $helm    = $self->helm;
     my $command = $self->command;
 
-    $helm->run_remote_command(command => $command, ssh => $ssh);
+    $helm->log->info("Running command ($command) on remote server $server");
+    $helm->run_remote_command(command => $command, ssh => $ssh, ssh_options => {tty => 1});
 }
 
 __PACKAGE__->meta->make_immutable;
