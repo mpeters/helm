@@ -54,7 +54,7 @@ sub execute {
     if( $sudo ) {
         $helm->log->debug("Changing owner of file ($file) to $sudo");
         $cmd = "sudo chown $sudo $dest";
-        $ssh->system($cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
+        $ssh->system({tty => 1}, $cmd) || $helm->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
         $helm->log->debug("Owner of file ($file) changed to $sudo");
     }
 
