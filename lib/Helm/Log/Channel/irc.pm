@@ -147,7 +147,7 @@ sub _irc_events {
                     fh => $pipe,
                     poll => 'r',
                     cb => sub {
-                        my $msg = <$pipe>;
+                        my $msg = <$pipe> || $TERMINATE;
                         chomp($msg);
                         if( $msg eq $TERMINATE ) {
                             $done->send(); 
