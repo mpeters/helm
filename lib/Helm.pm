@@ -29,6 +29,7 @@ has sudo           => (is => 'ro', writer => '_sudo',           isa      => 'Str
 has lock_type      => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
 has sleep          => (is => 'ro', writer => '_sleep',          isa      => 'Num');
 has current_server => (is => 'ro', writer => '_current_server', isa      => 'Helm::Server');
+has current_ssh    => (is => 'ro', writer => '_current_ssh',    isa      => 'Net::OpenSSH');
 has log            => (is => 'ro', writer => '_log',            isa      => 'Helm::Log');
 has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
 has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
@@ -66,12 +67,13 @@ has log_level => (
 
 my %REGISTERED_MODULES = (
     task => {
-        get       => 'Helm::Task::get',
-        patch     => 'Helm::Task::patch',
-        put       => 'Helm::Task::put',
-        rsync_put => 'Helm::Task::rsync_put',
-        run       => 'Helm::Task::run',
-        exec      => 'Helm::Task::run',
+        get               => 'Helm::Task::get',
+        patch             => 'Helm::Task::patch',
+        put               => 'Helm::Task::put',
+        rsync_put         => 'Helm::Task::rsync_put',
+        run               => 'Helm::Task::run',
+        exec              => 'Helm::Task::run',
+        clear_remote_lock => 'Helm::Task::clear_remote_lock',
     },
     log => {
         console => 'Helm::Log::Channel::console',
@@ -214,7 +216,8 @@ sub steer {
     $task_obj->validate();
 
     # make sure have a local lock if we need it
-    $self->die("Cannot obtain a local helm lock. Is another helm process running?")
+    $self->die("Cannot obtain a local helm lock. Is another helm process running?",
+        no_release_locks => 1)
       if ($self->lock_type eq 'local' || $self->lock_type eq 'both') && !$self->_get_local_lock;
 
     my @servers = @{$self->servers};
@@ -235,9 +238,11 @@ sub steer {
         $self->log->debug("Setting up SSH connection to $server" . ($port ? ":$port" : ''));
         my $ssh = Net::OpenSSH->new($server->name, %ssh_args);
         $ssh->error && $self->die("Can't ssh to $server: " . $ssh->error);
+        $self->_current_ssh($ssh);
 
         # get a lock on the server if we need to
-        $self->die("Cannot obtain remote lock on $server. Is another helm process working there?")
+        $self->die("Cannot obtain remote lock on $server. Is another helm process working there?",
+            no_release_locks => 1)
           if ($self->lock_type eq 'remote' || $self->lock_type eq 'both')
           && !$self->_get_remote_lock($ssh);
 
@@ -385,8 +390,12 @@ sub run_remote_command {
 }
 
 sub die {
-    my ($self, $msg) = @_;
+    my ($self, $msg, %options) = @_;
     $self->log->error($msg);
+    unless($options{no_release_locks}) {
+        $self->_release_remote_lock($self->current_ssh);
+        $self->_release_local_lock();
+    }
     exit(1);
 }
 
