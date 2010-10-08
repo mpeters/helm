@@ -78,6 +78,8 @@ of C<helm> aren't running at the same time.
 
 =cut
 
+$0 = 'helm';
+
 my $lock_type    = 'none';
 my $sudo         = '';
 my $sleep        = 0;
