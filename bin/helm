@@ -797,4 +797,8 @@ to Helm:
 
 =item * Add a compare option which allows the output (stdout/stderr) to be compared between servers in an intelligent manner
 
+=item * A real exception system to avoid parsing error messages
+
+=item * A way for logging channels to log things to other logging channels except themselves.
+
 =back
