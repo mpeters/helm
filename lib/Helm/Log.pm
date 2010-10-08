@@ -34,6 +34,11 @@ sub finalize {
     $_->finalize($helm) foreach @{$self->channels};
 }
 
+sub parallelize {
+    my ($self, $helm) = @_;
+    $_->parallelize($helm) foreach @{$self->channels};
+}
+
 sub start_server {
     my ($self, $server, $task) = @_;
     $_->start_server($server, $task) foreach @{$self->channels};
@@ -42,6 +47,11 @@ sub start_server {
 sub end_server {
     my ($self, $server, $task) = @_;
     $_->end_server($server, $task) foreach @{$self->channels};
+}
+
+sub forked {
+    my ($self, $type) = @_;
+    $_->forked($type) foreach @{$self->channels};
 }
 
 sub debug {

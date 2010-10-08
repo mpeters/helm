@@ -6,7 +6,7 @@ use namespace::autoclean;
 use DateTime;
 
 extends 'Helm::Log::Channel';
-has fh => (is => 'ro', writer => '_fh', isa => 'FileHandle | Undef');
+has fh => (is => 'ro', writer => '_fh', isa => 'FileHandle|Undef');
 
 sub initialize {
     my ($self, $helm) = @_;
@@ -16,14 +16,33 @@ sub initialize {
     open(my $fh, '>>', $file) or $helm->die("Could not open file $file for appending: $@");
     $self->_fh($fh);
 
-    print $fh $self->_timestamp . " HELM execution started by " . getlogin . "\n";
+    print $fh $self->_prefix . "HELM execution started by " . getlogin . "\n";
+}
+
+# nothing to do
+sub parallelize { }
+
+sub forked {
+    my ($self, $type) = @_;
+
+    # close the existing fh
+    my $fh = $self->fh;
+    close($fh) if $fh;
+
+    # re-open it for appending so that each child process has it's own distinct FH
+    my $file = $self->uri->file;
+    open($fh, '>>', $file) or CORE::die("Could not re-open file $file for appending: $@");
+    $self->_fh($fh);
+
 }
 
 sub finalize {
     my ($self, $helm) = @_;
 
     # close our FH
-    if( $self->fh ) {
+    if( my $fh = $self->fh ) {
+        $self->_current_server(undef);
+        print $fh $self->_prefix . "HELM execution ended\n";
         close($self->fh);
         $self->_fh(undef);
     }
@@ -31,43 +50,52 @@ sub finalize {
 
 sub start_server {
     my ($self, $server) = @_;
+    $self->SUPER::start_server($server);
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " BEGIN TASK ON $server\n";
+    print $fh $self->_prefix . "BEGIN TASK ON $server\n";
 }
 
 sub end_server {
     my ($self, $server) = @_;
+    $self->SUPER::end_server($server);
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " END TASK ON $server\n";
+    print $fh $self->_prefix . "END TASK ON $server\n";
 }
 
 sub debug {
     my ($self, $msg) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " [debug] $msg\n";
+    print $fh $self->_prefix . "[debug] $msg\n";
 }
 
 sub info {
     my ($self, $msg) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " $msg\n";
+    print $fh $self->_prefix . "$msg\n";
 }
 
 sub warn {
     my ($self, $msg) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " [warn] $msg\n";
+    print $fh $self->_prefix . "[warn] $msg\n";
 }
 
 sub error {
     my ($self, $msg) = @_;
     my $fh = $self->fh;
-    print $fh $self->_timestamp . " [error] $msg\n";
+    print $fh $self->_prefix . "[error] $msg\n";
 }
 
-sub _timestamp {
+sub _prefix {
     my $self = shift;
-    return '[' . DateTime->now->strftime('%a %b %d %H:%M:%S %Y') . ']';
+    my $prefix = '[' . DateTime->now->strftime('%a %b %d %H:%M:%S %Y') . '] ';
+
+    if( $self->current_server ) {
+        # use the current server's name as part of the prefix
+        $prefix = "$prefix\{" . $self->current_server->name . '} ';
+    }
+
+    return $prefix;
 }
 
 __PACKAGE__->meta->make_immutable;

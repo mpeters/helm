@@ -6,7 +6,7 @@ use Moose::Util::TypeConstraints qw(enum);
 use URI;
 use namespace::autoclean;
 use Try::Tiny;
-use File::Spec::Functions qw(catdir catfile tmpdir);
+use File::Spec::Functions qw(catdir catfile tmpdir devnull);
 use File::HomeDir;
 use Net::OpenSSH;
 use Fcntl qw(:flock);
@@ -14,6 +14,7 @@ use File::Basename qw(basename);
 use Helm::Log;
 use Helm::Server;
 use Scalar::Util qw(blessed);
+use Parallel::ForkManager;
 
 our $VERION = 0.1;
 
@@ -21,8 +22,6 @@ enum LOG_LEVEL => qw(debug info warn error);
 enum LOCK_TYPE => qw(none local remote both);
 
 has task           => (is => 'ro', writer => '_task',           required => 1);
-has extra_options  => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
-has extra_args     => (is => 'ro', isa    => 'ArrayRef',        default  => sub { [] });
 has config_uri     => (is => 'ro', writer => '_config_uri',     isa      => 'Str');
 has config         => (is => 'ro', writer => '_config',         isa      => 'Helm::Conf');
 has sudo           => (is => 'ro', writer => '_sudo',           isa      => 'Str');
@@ -33,7 +32,11 @@ has current_ssh    => (is => 'ro', writer => '_current_ssh',    isa      => 'Net
 has log            => (is => 'ro', writer => '_log',            isa      => 'Helm::Log');
 has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
 has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
-has local_lock_handle  => (is => 'ro', writer => '_local_lock_handle',  isa => 'FileHandle|Undef');
+has extra_options  => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
+has extra_args     => (is => 'ro', isa    => 'ArrayRef',        default  => sub { [] });
+has parallel       => (is => 'ro', isa    => 'Bool|Undef',      default  => 0);
+has parallel_max   => (is => 'ro', isa    => 'Int|Undef',       default  => 100);
+has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa => 'FileHandle|Undef');
 has servers    => (
     is      => 'ro',
     writer  => '_servers',
@@ -169,15 +172,24 @@ sub BUILD {
         $self->_servers(\@server_objs);
     }
 
-    # are we excluding any roles?
-
-    # if we have any roles, then get the servers with those roles
+    # if we have any roles, then get the servers with (or without) those roles
     my @roles = @{$self->roles};
     my @exclude_roles = @{$self->exclude_roles};
     if( @roles ) {
         $self->die("Can't specify roles without a config") if !$self->config;
         my @servers = @{$self->servers};
         push(@servers, $self->config->get_servers_by_roles(\@roles, \@exclude_roles));
+        if(!@servers) {
+            if( @exclude_roles ) {
+                $self->die("No servers with roles ("
+                      . join(', ', @roles)
+                      . ") when roles ("
+                      . join(', ', @exclude_roles)
+                      . ") are excluded");
+            } else {
+                $self->die("No servers with roles: " . join(', ', @roles));
+            }
+        }
         $self->_servers(\@servers);
     }
     
@@ -221,12 +233,18 @@ sub steer {
       if ($self->lock_type eq 'local' || $self->lock_type eq 'both') && !$self->_get_local_lock;
 
     my @servers = @{$self->servers};
-    $self->log->debug("Running task $task on servers: " . join(', ', @servers) . "\n");
+    $self->log->info(qq(Running task "$task" on servers: ) . join(', ', @servers));
+
+    my $forker;
+    if( $self->parallel ) {
+        $forker = Parallel::ForkManager->new($self->parallel_max);
+        $self->log->parallelize($self);
+    }
 
     # execute the task for each server
     foreach my $server (@servers) {
-        $self->_current_server($server);
         $self->log->start_server($server);
+        $self->_current_server($server);
 
         my $port = $server->port || $self->default_port;
         my %ssh_args = (
@@ -236,6 +254,27 @@ sub steer {
         $ssh_args{port}    = $port if $port;
         $ssh_args{timeout} = $self->timeout      if $self->timeout;
         $self->log->debug("Setting up SSH connection to $server" . ($port ? ":$port" : ''));
+
+        # in parallel mode, send all stdout/stderr from each connection to a file
+        if( $self->parallel ) {
+            my $log_file = catfile(tmpdir(), "helm-$server.log");
+            open(my $log_fh, '>', $log_file) or die "Could not open file $log_file for logging: $!";
+            open(my $devnull, '<', devnull) or die "Could not open /dev/null: $!";
+            $ssh_args{default_stdout_fh} = $log_fh;
+            $ssh_args{default_stderr_fh} = $log_fh;
+            $ssh_args{default_stdin_fh} = $devnull;
+            $self->log->info("Logging output for $server to $log_file");
+
+            my $pid = $forker->start;
+            if( $pid ) {
+                # let the loggers know we're now forked;
+                $self->log->forked('parent');
+                next;
+            } else {
+                $self->log->forked('child');
+            }
+        }
+
         my $ssh = Net::OpenSSH->new($server->name, %ssh_args);
         $ssh->error && $self->die("Can't ssh to $server: " . $ssh->error);
         $self->_current_ssh($ssh);
@@ -254,8 +293,10 @@ sub steer {
         $self->log->end_server($server);
         $self->_release_remote_lock($ssh);
         sleep($self->sleep) if $self->sleep;
+        $forker->finish if $self->parallel;
     }
 
+    $forker->wait_all_children if $self->parallel;
     # release the local lock
     $self->_release_local_lock();
     $self->log->finalize($self);
