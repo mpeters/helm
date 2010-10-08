@@ -21,6 +21,12 @@ has email_address => (is => 'ro', writer => '_email_address', isa => 'Str');
 has email_body    => (is => 'ro', writer => '_email_body',    isa => 'Str', default => '');
 has from          => (is => 'ro', writer => '_from',          isa => 'Str', default => '');
 
+# TODO - email logger doesn't work with --parallel yet
+sub parallelize { 
+    die "Email logger doesn't work with --parallel yet!";
+}
+sub forked { }
+
 sub initialize {
     my ($self, $helm) = @_;
 
@@ -56,12 +62,14 @@ sub finalize {
 
 sub start_server {
     my ($self, $server) = @_;
+    $self->SUPER::start_server($server);
     my $line = '=' x 70;
     $self->_append_body("$line\n$server\n$line\n");
 }
 
 sub end_server {
     my ($self, $server) = @_;
+    $self->SUPER::end_server($server);
     $self->_append_body("\n\n");
 }
 
