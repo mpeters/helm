@@ -2,7 +2,7 @@ package Helm::Log::Channel::console;
 use strict;
 use warnings;
 use Moose;
-use Term::ANSIColor qw(colored);
+use Term::ANSIColor qw(colored color);
 use IO::Pipe;
 use AnyEvent;
 use namespace::autoclean;
@@ -34,7 +34,8 @@ sub initialize {
 
 sub finalize {
     my ($self, $helm) = @_;
-    # nothing to do here
+    # make sure the terminal is reset
+    print color 'reset';
 }
 
 sub start_server {
@@ -101,7 +102,7 @@ sub parallelize {
     # and one for the parent so it's handled like everything else
     Helm->debug("Parent process should also communicate over multiplexing pipes");
     my $parent_pipe = IO::Pipe->new();
-    $pipes{parents} = $parent_pipe;
+    $pipes{parent} = $parent_pipe;
 
     $self->_pipes(\%pipes);
 
@@ -124,7 +125,7 @@ sub parallelize {
             $pipe->reader;
 
             # create an IO watcher for this pipe
-            Helm->debug("Setting up reading event for child pipe for $server");
+            Helm->debug("Setting up reading event for IO worker pipe for $server");
             $pipe_cleaners{$server} = AnyEvent->io(
                 fh   => $pipe,
                 poll => 'r',
@@ -142,6 +143,7 @@ sub parallelize {
             );
         }
 
+        Helm->debug("Waiting on child pipes to receive data");
         $all_clean->recv;
         Helm->debug("All child pipes have been read");
         exit(0);
