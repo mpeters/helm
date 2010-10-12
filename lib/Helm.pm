@@ -15,8 +15,13 @@ use Helm::Log;
 use Helm::Server;
 use Scalar::Util qw(blessed);
 use Parallel::ForkManager;
+use DateTime;
+use IO::File;
 
 our $VERION = 0.1;
+our $DEBUG = 0;
+our $DEBUG_LOG;
+our $DEBUG_LOG_PID;
 
 enum LOG_LEVEL => qw(debug info warn error);
 enum LOCK_TYPE => qw(none local remote both);
@@ -444,6 +449,28 @@ sub register_module {
     my ($class, $type, $key, $module) = @_;
     CORE::die("Unknown Helm module type '$type'!") unless exists $REGISTERED_MODULES{$type};
     $REGISTERED_MODULES{$type}->{$key} = $module;
+}
+
+# this is a class method so that it can be called even before any objects
+# have been fully initialized.
+sub debug {
+    return unless $DEBUG;
+    my ($self, @msgs) = @_;
+
+    # open the debug log handle if we haven't opened it yet
+    # or re-open if we're already opened it in another process
+    if(!$DEBUG_LOG || $DEBUG_LOG_PID != $$) {
+        $DEBUG_LOG = IO::File->new('>> debug.log')
+          or $self->die("Could not open helm.debug for appending: $!");
+        $DEBUG_LOG->autoflush(1);
+        $DEBUG_LOG_PID = $$;
+    }
+
+    my $ts = DateTime->now->strftime('%a %b %d %H:%M:%S %Y'); 
+    foreach my $msg (@msgs) {
+        $msg =~ s/\s+$//;
+        $DEBUG_LOG->print("[$ts] {$$} $msg\n");
+    } 
 }
 
 __PACKAGE__->meta->make_immutable;

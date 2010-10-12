@@ -22,6 +22,7 @@ my $build = Module::Build->new(
         'DateTime'              => '0.63',
         'Parallel::ForkManager' => '0.7.7',
         'IO::Pipe'              => '1.13',
+        'IO::File'              => '1.14',
         'AnyEvent'              => '5.271',
     },
     recommends => {

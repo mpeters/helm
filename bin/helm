@@ -151,14 +151,7 @@ if(@libs) {
     }
 }
 
-if( $debug ) {
-    if(!$log_level || $log_level eq 'debug') {
-        $log_level = 'debug';
-    } else {
-        print STDERR "Can't specify --debug and --log-level at the same time\n";
-        exit(1);
-    }
-} elsif(!$log_level) {
+if(!$log_level) {
     $log_level = 'info';
 }
 
@@ -174,6 +167,11 @@ if(@roles) {
 }
 if(@exclude_roles) {
     @exclude_roles = map { split(/\s*,\s*/, $_) } @exclude_roles;
+}
+
+if( $debug ) {
+    # set the class variable since this isn't tied to a particular Helm object
+    $Helm::DEBUG = $debug;
 }
 
 # look through @ARGV to save any extra junk for task specific
@@ -450,6 +448,14 @@ Display the version of Helm installed
 =item --dump-config
 
 Display a dump of the configuration data as understood by Helm
+
+=item --debug
+
+Tell helm to dump out verbose information about what it is doing internally
+to a log file named F<helm.debug> in the current working directory.
+This is different than the C<--log-level> since that is mainly for end user
+logging of individual task actions. This flag is meant to debug the internals
+of helm, including the logging subsystem, which is why it's a separate flag.
 
 =back
 
