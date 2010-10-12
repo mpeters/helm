@@ -125,6 +125,7 @@ around BUILDARGS => sub {
                     CORE::die("Could not load module $log_class for log type $scheme: $@");
                 }
             }
+            Helm->debug("Adding new logging channel for URI $uri using class $log_class");
             $log->add_channel($log_class->new(uri => $uri, task => $args{task}));
         }
         $args{log} = $log;
@@ -140,6 +141,7 @@ sub BUILD {
 
     # create a config object from the config URI string (if it's not already a config object)
     if ($self->config_uri && !$self->config ) {
+        Helm->debug("Loading configuration for URI " . $self->config_uri);
         $self->_config($self->load_configuration($self->config_uri));
     }
 
@@ -161,7 +163,10 @@ sub BUILD {
     if(@server_names) {
         my @server_objs;
         foreach my $server_name (Helm::Server->expand_server_names(@server_names)) {
-            next if $excludes{$server_name};
+            if( $excludes{$server_name} ) {
+                Helm->debug("Excluding server $server_name");
+                next;
+            }
             # if it's already a Helm::Server just keep it
             if( ref $server_name && blessed($server_name) && $server_name->isa('Helm::Server') ) {
                 push(@server_objs, $server_name);
@@ -233,16 +238,21 @@ sub steer {
     $task_obj->validate();
 
     # make sure have a local lock if we need it
-    $self->die("Cannot obtain a local helm lock. Is another helm process running?",
-        no_release_locks => 1)
-      if ($self->lock_type eq 'local' || $self->lock_type eq 'both') && !$self->_get_local_lock;
+    if ($self->lock_type eq 'local' || $self->lock_type eq 'both') {
+        Helm->debug("Trying to optain local helm lock");
+        $self->die("Cannot obtain a local helm lock. Is another helm process running?",
+            no_release_locks => 1)
+          unless $self->_get_local_lock;
+    }
 
     my @servers = @{$self->servers};
     $self->log->info(qq(Running task "$task" on servers: ) . join(', ', @servers));
 
     my $forker;
     if( $self->parallel ) {
+        Helm->debug("Setting up fork manager");
         $forker = Parallel::ForkManager->new($self->parallel_max);
+        Helm->debug("Letting loggers know we're going to parallelize things");
         $self->log->parallelize($self);
     }
 
@@ -271,6 +281,7 @@ sub steer {
             $self->log->info("Logging output for $server to $log_file");
 
             my $pid = $forker->start;
+            Helm->debug("Letting the loggers know we've actually forked off a child task worker");
             if( $pid ) {
                 # let the loggers know we're now forked;
                 $self->log->forked('parent');
@@ -285,11 +296,13 @@ sub steer {
         $self->_current_ssh($ssh);
 
         # get a lock on the server if we need to
-        $self->die("Cannot obtain remote lock on $server. Is another helm process working there?",
-            no_release_locks => 1)
-          if ($self->lock_type eq 'remote' || $self->lock_type eq 'both')
-          && !$self->_get_remote_lock($ssh);
+        if ($self->lock_type eq 'remote' || $self->lock_type eq 'both') {
+            Helm->debug("Trying to obtain remote lock on $server");
+            $self->die("Cannot obtain remote lock on $server. Is another helm process working there?",
+                no_release_locks => 1) unless $self->_get_remote_lock($ssh);
+        }
 
+        Helm->debug(qq(Excuting task "$task" on server "$server"));
         $task_obj->execute(
             ssh    => $ssh,
             server => $server,
@@ -297,13 +310,24 @@ sub steer {
 
         $self->log->end_server($server);
         $self->_release_remote_lock($ssh);
-        sleep($self->sleep) if $self->sleep;
-        $forker->finish if $self->parallel;
+        if( my $secs = $self->sleep ) {
+            Helm->debug("Sleeping for $secs seconds between servers");
+            sleep($secs);
+        }
+        if($self->parallel) {
+            Helm->debug("Finished work in child task process");
+            $forker->finish;
+        }
     }
 
-    $forker->wait_all_children if $self->parallel;
+    if( $self->parallel ) {
+        Helm->debug("Waiting on all child task processes to finish");
+        $forker->wait_all_children;
+    }
+
     # release the local lock
     $self->_release_local_lock();
+    Helm->debug("Finalizing loggers");
     $self->log->finalize($self);
 }
 
@@ -448,6 +472,7 @@ sub die {
 sub register_module {
     my ($class, $type, $key, $module) = @_;
     CORE::die("Unknown Helm module type '$type'!") unless exists $REGISTERED_MODULES{$type};
+    Helm->debug("Loading module $module for $type plugins with key $key");
     $REGISTERED_MODULES{$type}->{$key} = $module;
 }
 
