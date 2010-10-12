@@ -131,7 +131,7 @@ sub error {
 sub _say {
     my ($self, $msg) = @_;
     my $prefix = $self->prefix;
-    Helm->debug("sending message to IO worker: $prefix$msg");
+    Helm->debug("Sending message to IO worker: $prefix$msg");
     $self->irc_pipe->print("MSG: $prefix$msg\n") or CORE::die("Could not print message to IO Worker: $!");
 }
 

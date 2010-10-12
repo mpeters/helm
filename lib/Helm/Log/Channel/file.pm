@@ -13,6 +13,7 @@ sub initialize {
 
     # file the file and open it for appending
     my $file = $self->uri->file;
+    Helm->debug("Opening file $file for logging");
     open(my $fh, '>>', $file) or $helm->die("Could not open file $file for appending: $@");
     $self->_fh($fh);
 
@@ -31,6 +32,7 @@ sub forked {
 
     # re-open it for appending so that each child process has it's own distinct FH
     my $file = $self->uri->file;
+    Helm->debug("Re-opening file $file for logging after fork");
     open($fh, '>>', $file) or CORE::die("Could not re-open file $file for appending: $@");
     $self->_fh($fh);
 
@@ -43,6 +45,7 @@ sub finalize {
     if( my $fh = $self->fh ) {
         $self->_current_server(undef);
         print $fh $self->_prefix . "HELM execution ended\n";
+        Helm->debug("Closing logging file handle");
         close($self->fh);
         $self->_fh(undef);
     }

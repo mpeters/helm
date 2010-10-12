@@ -18,6 +18,7 @@ sub initialize {
     my ($self, $helm) = @_;
 
     # default FH is STDERR
+    Helm->debug("Initializing output handle to STDERR");
     my $fh = IO::Handle->new_from_fd(fileno(STDERR), 'w');
     $self->_fh($fh);
 
@@ -94,9 +95,11 @@ sub parallelize {
 
     # if we're going to do parallel stuff, then create a pipe for each server now
     # that we can use to communicate with the child processes later
+    Helm->debug("Creating a pipe for each server target for multiplexing output");
     my %pipes = map { $_->name => IO::Pipe->new } (@{$helm->servers});
 
     # and one for the parent so it's handled like everything else
+    Helm->debug("Parent process should also communicate over multiplexing pipes");
     my $parent_pipe = IO::Pipe->new();
     $pipes{parents} = $parent_pipe;
 
@@ -107,6 +110,7 @@ sub parallelize {
     $helm->die("Couldn't fork console IO worker process") if !defined $pid;
     if ($pid) {
         # parent here
+        Helm->debug("Parent process pipe is a writer");
         $parent_pipe->writer;
         $parent_pipe->autoflush(1);
         $self->_fh($parent_pipe);
@@ -114,11 +118,13 @@ sub parallelize {
         # child here
         my %pipe_cleaners;
         my $all_clean = AnyEvent->condvar;
+        Helm->debug("Child process pipes are readers");
         foreach my $server (keys %pipes) {
             my $pipe = $pipes{$server};
             $pipe->reader;
 
             # create an IO watcher for this pipe
+            Helm->debug("Setting up reading event for child pipe for $server");
             $pipe_cleaners{$server} = AnyEvent->io(
                 fh   => $pipe,
                 poll => 'r',
@@ -127,8 +133,9 @@ sub parallelize {
                     if ($msg) {
                         print STDERR $msg;
                     } else {
+                        Helm->debug("Pipe for $server has been disconnected"); 
                         delete $pipe_cleaners{$server};
-                        # tell the main program we're done if this is the last broom
+                        # tell the main program we're done if this is the last pipe
                         $all_clean->send unless %pipe_cleaners;
                     }
                 },
@@ -136,6 +143,7 @@ sub parallelize {
         }
 
         $all_clean->recv;
+        Helm->debug("All child pipes have been read");
         exit(0);
     }
 }
@@ -146,8 +154,10 @@ sub forked {
     my ($self, $type) = @_;
 
     if ($type eq 'child') {
-        my $pipes = $self->pipes;
-        my $pipe  = $pipes->{$self->current_server->name};
+        my $pipes       = $self->pipes;
+        my $server_name = $self->current_server->name;
+        my $pipe        = $pipes->{$server_name};
+        Helm->debug("Console output now goes over writer pipe for $server_name");
         $pipe->writer();
         $pipe->autoflush(1);
         $self->_fh($pipe);

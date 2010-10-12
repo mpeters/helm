@@ -44,8 +44,10 @@ sub load {
         foreach my $name (@names) {
             $helm->die("Already seen server $name in $file. Duplicate entries not allowed.")
               if $seen_server_names{$name};
-            push(@servers,
-                Helm::Server->new(name => $name, roles => \@roles, port => $port));
+            Helm->debug("Adding server $name with roles: "
+                  . join(', ', @roles)
+                  . ($port ? " on port $port" : ''));
+            push(@servers, Helm::Server->new(name => $name, roles => \@roles, port => $port));
             $seen_server_names{$name}++;
         }
     }
