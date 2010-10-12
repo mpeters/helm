@@ -329,6 +329,7 @@ sub steer {
     $self->_release_local_lock();
     Helm->debug("Finalizing loggers");
     $self->log->finalize($self);
+    Helm->debug("Finished with all tasks on all servers");
 }
 
 sub load_configuration {
