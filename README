@@ -193,6 +193,14 @@ OPTIONS
     --dump-config
         Display a dump of the configuration data as understood by Helm
 
+    --debug
+        Tell helm to dump out verbose information about what it is doing
+        internally to a log file named helm.debug in the current working
+        directory. This is different than the "--log-level" since that is
+        mainly for end user logging of individual task actions. This flag is
+        meant to debug the internals of helm, including the logging
+        subsystem, which is why it's a separate flag.
+
 TASKS
 CONFIGURATION
     By default, "helm" doesn't use a configuration file, but certain
@@ -475,13 +483,9 @@ TODO
     In the not too distant future, we'd like to add the following features
     to Helm:
 
-    * Add an option to run tasks in parallel on different servers, and to
-    control how many parallel connections are running at a time.
     * Add a capture option which allows stdout/stderr to be handled
     differently
     * Add a compare option which allows the output (stdout/stderr) to be
     compared between servers in an intelligent manner
     * A real exception system to avoid parsing error messages
-    * A way for logging channels to log things to other logging channels
-    except themselves.
 
