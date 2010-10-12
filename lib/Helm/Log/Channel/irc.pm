@@ -18,9 +18,9 @@ has irc_pipe    => (is => 'ro', writer => '_irc_pipe');
 has pipes       => (is => 'ro', writer => '_pipes', isa => 'HashRef');
 has is_parallel => (is => 'rw', isa    => 'Bool', default => 0);
 has irc_pause   => (is => 'ro', writer => '_irc_pause', isa => 'Int', default => 0);
+has prefix      => (is => 'rw', isa => 'Str', default => '');
 
 my $DISCONNECT = 'Disconnecting';
-my $DEBUG;
 
 # first parse the IRC URI into some parts that we can use to create an IRC connection.
 # Then fork off an IRC worker process to go into an event loop that will read input
@@ -34,9 +34,6 @@ sub initialize {
     $self->_irc_pause($pause) if $pause;
 
     my %irc_info;
-$DEBUG = IO::File->new('>> debug.log');
-$DEBUG->autoflush(1);
-print $DEBUG _timestamp() . " $$ main process\n";
 
     # file the file and open it for appending
     my $uri = $self->uri;
@@ -82,15 +79,13 @@ print $DEBUG _timestamp() . " $$ main process\n";
         $irc_pipe->writer;
         $irc_pipe->autoflush(1);
         $self->_irc_pipe($irc_pipe);
-print $DEBUG _timestamp() . " $$ parent IRC pipe set up\n";
+        Helm->debug("Parent IRC pipe set up");
     } else {
-$DEBUG = IO::File->new('>> debug.log');
-$DEBUG->autoflush(1);
-print $DEBUG _timestamp() . " $$ child IRC worker process\n";
+        Helm->debug("Child IRC worker process");
         # child here
         $irc_pipe->reader;
         $irc_pipe->autoflush(1);
-print $DEBUG _timestamp() . " $$ child IRC pipe set up\n";
+        Helm->debug("Child IRC pipe set up");
         $self->_irc_events($irc_pipe, %irc_info);
     }
 }
@@ -98,11 +93,7 @@ print $DEBUG _timestamp() . " $$ child IRC pipe set up\n";
 sub finalize {
     my ($self, $helm) = @_;
 
-    # if we're in parallel mode, then wait until our IO worker is done
-    if( $self->is_parallel ) {
-        my $pid = wait;
-print $DEBUG _timestamp() . " $$ parent reaped IO worker child $pid\n";
-    }
+    Helm->debug("IRC channel finalized: Nothing to do");
 }
 
 sub start_server {
@@ -139,8 +130,9 @@ sub error {
 
 sub _say {
     my ($self, $msg) = @_;
-print $DEBUG _timestamp() . " $$ sending message to IO worker: $msg\n";
-    $self->irc_pipe->print("MSG: $msg\n") or CORE::die("Could not print message to IO Worker: $!");
+    my $prefix = $self->prefix;
+    Helm->debug("sending message to IO worker: $prefix$msg");
+    $self->irc_pipe->print("MSG: $prefix$msg\n") or CORE::die("Could not print message to IO Worker: $!");
 }
 
 sub _irc_events {
@@ -152,8 +144,7 @@ sub _irc_events {
     $irc->reg_cb(
         join => sub {
             my ($irc, $nick, $channel, $is_myself) = @_;
-print $DEBUG _timestamp() . " $$ IRC worker joined channel $channel\n";
-print $DEBUG _timestamp() . " registered? " . $irc->registered . "\n";
+            Helm->debug("IRC worker joined channel $channel");
             # send the initial message
             $irc->send_msg(PRIVMSG => $channel, "Helm execution started by " . getlogin);
             if ($is_myself && $channel eq $args{channel}) {
@@ -163,7 +154,7 @@ print $DEBUG _timestamp() . " registered? " . $irc->registered . "\n";
                     cb   => sub {
                         my $msg = <$irc_pipe>;
                         if(!$msg) {
-print $DEBUG _timestamp() . " $$ IRC worker ran out of pipe\n";
+                            Helm->debug("IRC worker ran out of pipe");
                             $irc->send_msg(PRIVMSG => $channel, $DISCONNECT);
                             undef $io_watcher;
                         } else {
@@ -171,8 +162,11 @@ print $DEBUG _timestamp() . " $$ IRC worker ran out of pipe\n";
                             if ($msg =~ /^MSG: (.*)/) {
                                 my $content = $1;
                                 chomp($content);
-                                sleep($self->irc_pause) if $self->irc_pause;
-print $DEBUG _timestamp() . " $$ IRC worker sending message to IRC channel: $content\n";
+                                if( my $secs = $self->irc_pause ) {
+                                    Helm->debug("IRC worker sleeping for $secs seconds");
+                                    sleep($secs);
+                                }
+                                Helm->debug("IRC worker sending message to IRC channel: $content");
                                 $irc->send_msg(PRIVMSG => $channel, $content);
                             }
                         }
@@ -187,19 +181,19 @@ print $DEBUG _timestamp() . " $$ IRC worker sending message to IRC channel: $con
         sent => sub {
             my ($irc, $junk, $type, $channel, $msg) = @_;
             if( $type eq 'PRIVMSG' && $msg eq $DISCONNECT ) {
-print $DEBUG _timestamp() . " $$ IRC channel received DISCONNECT message\n";
+                Helm->debug("IRC channel received DISCONNECT message");
                 $done->send();
             }
         }
     );
 
-print $DEBUG _timestamp() . " $$ IRC worker connecting to server $args{server}\n";
+    Helm->debug("IRC worker connecting to server $args{server}");
     $irc->connect($args{server}, $args{port}, {nick => $args{nick}});
-print $DEBUG _timestamp() . " $$ IRC worker trying to join channel $args{channel}\n";
+    Helm->debug("IRC worker trying to join channel $args{channel}");
     $irc->send_srv(JOIN => ($args{channel}));
-print $DEBUG _timestamp() . " $$ IRC worker waiting for work\n";
+    Helm->debug("IRC worker waiting for work");
     $done->recv;
-print $DEBUG _timestamp() . " $$ IRC worker done with work, disconnecting\n";
+    Helm->debug("IRC worker done with work, disconnecting");
     $irc->disconnect();
     exit(0);
 }
@@ -211,7 +205,6 @@ print $DEBUG _timestamp() . " $$ IRC worker done with work, disconnecting\n";
 # This extra IO worker process will multi-plex the output coming from those pipes
 # into something reasonable for the IRC bot to handle.
 sub parallelize {
-die "IRC logging doesn't work with --parallel yet!";
     my ($self, $helm) = @_;
     $self->is_parallel(1);
 
@@ -222,11 +215,9 @@ die "IRC logging doesn't work with --parallel yet!";
 
     # fork off an IO worker process
     my $pid = fork();
-$DEBUG = IO::File->new('>> debug.log');
-$DEBUG->autoflush(1);
     $helm->die("Couldn't fork IRC IO worker process") if !defined $pid;
     if (!$pid) {
-print $DEBUG _timestamp() . " $$ IO worker forked\n";
+        Helm->debug("IO worker forked");
         # child here
         my %pipe_cleaners;
         my $all_clean = AnyEvent->condvar;
@@ -234,19 +225,19 @@ print $DEBUG _timestamp() . " $$ IO worker forked\n";
             my $pipe = $pipes{$server};
             $pipe->reader;
 
-print $DEBUG _timestamp() . " $$ IO worker setting up AnyEvent reads on pipe for $server\n";
             # create an IO watcher for this pipe
+            Helm->debug("IO worker setting up AnyEvent reads on pipe for $server");
             $pipe_cleaners{$server} = AnyEvent->io(
                 fh   => $pipe,
                 poll => 'r',
                 cb   => sub {
                     my $msg = <$pipe>;
                     if ($msg) {
-print $DEBUG _timestamp() . " $$ print message to IRC PIPE: $msg";
+                        Helm->debug("Printing message to IRC PIPE: $msg");
                         $self->irc_pipe->print($msg) or CORE::die "Could not print message to IRC PIPE: $!";
                     } else {
                         delete $pipe_cleaners{$server};
-print $DEBUG _timestamp() . " $$ removing IO pipe for $server\n";
+                        Helm->debug("Removing IO pipe for $server");
                         # tell the main program we're done if this is the last broom
                         $all_clean->send unless %pipe_cleaners;
                     }
@@ -254,16 +245,11 @@ print $DEBUG _timestamp() . " $$ removing IO pipe for $server\n";
             );
         }
 
-print $DEBUG _timestamp() ." $$ waiting for IO\n";
+        Helm->debug("Waiting for IO to send to IRC worker process");
         $all_clean->recv;
-print $DEBUG _timestamp() ." $$ all done with IO\n";
+        Helm->debug("All done with IO to send to IRC worker process");
         exit(0);
     }
-}
-
-sub _timestamp {
-    use DateTime;
-    return '[' . DateTime->now->strftime('%a %b %d %H:%M:%S %Y') . ']';
 }
 
 # we've been forked, and if it's a child we want to initialize the pipe
@@ -272,12 +258,13 @@ sub forked {
     my ($self, $type) = @_;
 
     if ($type eq 'child') {
-print $DEBUG _timestamp() . " $$ forked worker process for " . $self->current_server->name . "\n";
+        Helm->debug("Forked worker process for " . $self->current_server->name);
         my $pipes = $self->pipes;
         my $pipe  = $pipes->{$self->current_server->name};
         $pipe->writer();
         $pipe->autoflush(1);
         $self->_irc_pipe($pipe);
+        $self->prefix('[' . $self->current_server->name . '] ');
     }
 }
 
