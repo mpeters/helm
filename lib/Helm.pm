@@ -493,9 +493,10 @@ sub debug {
     }
 
     my $ts = DateTime->now->strftime('%a %b %d %H:%M:%S %Y'); 
+    my ($calling_class) = caller();
     foreach my $msg (@msgs) {
         $msg =~ s/\s+$//;
-        $DEBUG_LOG->print("[$ts] {$$} $msg\n");
+        $DEBUG_LOG->print("[$ts] [$$] [$calling_class] $msg\n");
     } 
 }
 
