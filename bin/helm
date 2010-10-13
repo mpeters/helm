@@ -267,14 +267,14 @@ try {
 };
 
 sub show_help {
-    if( $ARGV[0] ) {
-        if( $ARGV[0] eq 'tasks' ) {
+    if( $extra_args[0] ) {
+        if( $extra_args[0] eq 'tasks' ) {
             warn "Known Helm tasks:\n";
             foreach my $task (Helm->known_tasks) {
                 warn "  $task\n";
             }
         } else {
-            my $help_text = Helm->task_help($ARGV[0]);
+            my $help_text = Helm->task_help($extra_args[0]);
             warn "$help_text\n";
         }
     } else {
