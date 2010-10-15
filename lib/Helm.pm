@@ -80,7 +80,6 @@ my %REGISTERED_MODULES = (
         put               => 'Helm::Task::put',
         rsync_put         => 'Helm::Task::rsync_put',
         run               => 'Helm::Task::run',
-        exec              => 'Helm::Task::run',
         clear_remote_lock => 'Helm::Task::clear_remote_lock',
     },
     log => {
@@ -246,7 +245,12 @@ sub steer {
     }
 
     my @servers = @{$self->servers};
-    $self->log->info(qq(Running task "$task" on servers: ) . join(', ', @servers));
+    $self->log->info("Helm execution started by " . getlogin);
+    if( @servers > 20 ) {
+        $self->log->info(qq("Running task "$task" on ) . scalar(@servers) . " servers");
+    } else {
+        $self->log->info(qq(Running task "$task" on servers: ) . join(', ', @servers));
+    }
 
     my $forker;
     if( $self->parallel ) {

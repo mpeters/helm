@@ -21,15 +21,6 @@ sub initialize {
     Helm->debug("Initializing output handle to STDERR");
     my $fh = IO::Handle->new_from_fd(fileno(STDERR), 'w');
     $self->_fh($fh);
-
-    $self->output($LINE, 'blue');
-    $self->output(
-        '['
-          . DateTime->now->strftime('%a %b %d %H:%M:%S %Y')
-          . '] Helm execution started by '
-          . getlogin,
-        'bold blue'
-    );
 }
 
 sub finalize {
