@@ -29,7 +29,6 @@ enum LOCK_TYPE => qw(none local remote both);
 has task           => (is => 'ro', writer => '_task',           required => 1);
 has config_uri     => (is => 'ro', writer => '_config_uri',     isa      => 'Str');
 has config         => (is => 'ro', writer => '_config',         isa      => 'Helm::Conf');
-has sudo           => (is => 'ro', writer => '_sudo',           isa      => 'Str');
 has lock_type      => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
 has sleep          => (is => 'ro', writer => '_sleep',          isa      => 'Num');
 has current_server => (is => 'ro', writer => '_current_server', isa      => 'Helm::Server');
@@ -37,6 +36,7 @@ has current_ssh    => (is => 'ro', writer => '_current_ssh',    isa      => 'Net
 has log            => (is => 'ro', writer => '_log',            isa      => 'Helm::Log');
 has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
 has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
+has sudo           => (is => 'rw', isa    => 'Str',             default  => '');
 has extra_options  => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
 has extra_args     => (is => 'ro', isa    => 'ArrayRef',        default  => sub { [] });
 has parallel       => (is => 'ro', isa    => 'Bool|Undef',      default  => 0);
