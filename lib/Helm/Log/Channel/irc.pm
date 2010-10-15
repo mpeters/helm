@@ -146,7 +146,6 @@ sub _irc_events {
             my ($irc, $nick, $channel, $is_myself) = @_;
             Helm->debug("IRC worker joined channel $channel");
             # send the initial message
-            $irc->send_msg(PRIVMSG => $channel, "Helm execution started by " . getlogin);
             if ($is_myself && $channel eq $args{channel}) {
                 $io_watcher = AnyEvent->io(
                     fh   => $irc_pipe,

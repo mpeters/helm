@@ -16,8 +16,6 @@ sub initialize {
     Helm->debug("Opening file $file for logging");
     open(my $fh, '>>', $file) or $helm->die("Could not open file $file for appending: $@");
     $self->_fh($fh);
-
-    print $fh $self->_prefix . "HELM execution started by " . getlogin . "\n";
 }
 
 # nothing to do
