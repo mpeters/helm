@@ -470,6 +470,31 @@ sub run_remote_command {
       or $self->die("Can't execute command ($cmd) on server $server: " . $ssh->error);
 }
 
+sub run_local_command {
+    my $self = shift;
+    my %args = @_ > 1 ? @_ : (command => $_[0]);
+    my @cmd  = ref $args{command} ? @{$args{command}} : ($args{command});
+
+    my $return = system(@cmd);
+    if( system(@cmd) != 0 ) {
+        $self->die("Can't execute local command ($cmd): " . $!);
+    }
+}
+
+sub ssh_connection {
+    my ($self, %args) = @_;
+    my $server = $args{server};
+    my %ssh_args = (
+        ctl_dir     => catdir(File::HomeDir->my_home, '.helm'),
+        strict_mode => 0,
+    );
+    my $port = $server->port || $self->default_port;
+    $ssh_args{port}    = $port if $port;
+    $ssh_args{timeout} = $self->timeout      if $self->timeout;
+    $self->log->debug("Setting up SSH connection to $server" . ($port ? ":$port" : ''));
+    return Net::OpenSSH->new($server->name, %ssh_args);
+}
+
 sub die {
     my ($self, $msg, %options) = @_;
     $self->log->error($msg);
