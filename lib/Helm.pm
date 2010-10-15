@@ -252,6 +252,9 @@ sub steer {
         $self->log->info(qq(Running task "$task" on servers: ) . join(', ', @servers));
     }
 
+    $self->log->debug("Running task setup");
+    $task_obj->setup();
+
     my $forker;
     if( $self->parallel ) {
         Helm->debug("Setting up fork manager");
@@ -328,6 +331,9 @@ sub steer {
         Helm->debug("Waiting on all child task processes to finish");
         $forker->wait_all_children;
     }
+
+    $self->log->debug("Running task teardown");
+    $task_obj->teardown();
 
     # release the local lock
     $self->_release_local_lock();

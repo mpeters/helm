@@ -8,6 +8,7 @@ use File::Spec::Functions qw(catfile);
 
 has helm => (is => 'ro', writer => '_helm', isa => 'Helm');
 
+# must be implemented in child classes
 sub execute {
     my ($self, %args) = @_;
     die "You must implement the execute method in your child class " . ref($self) . "!";
@@ -22,6 +23,10 @@ sub help {
     my ($self, $task) = @_;
     return qq(No help documentation for "$task". Bug your implementers);
 }
+
+# can be implemented in child classes
+sub setup    { }
+sub teardown { }
 
 sub unique_tmp_file {
     my ($self, %args) = @_;
