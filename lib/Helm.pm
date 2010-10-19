@@ -18,7 +18,7 @@ use Parallel::ForkManager;
 use DateTime;
 use IO::File;
 
-our $VERION = 0.1;
+our $VERSION = 0.1;
 our $DEBUG = 0;
 our $DEBUG_LOG;
 our $DEBUG_LOG_PID;
@@ -477,7 +477,7 @@ sub run_local_command {
 
     my $return = system(@cmd);
     if( system(@cmd) != 0 ) {
-        $self->die("Can't execute local command ($cmd): " . $!);
+        $self->die("Can't execute local command (" . join(' ', @cmd) . ": " . $!);
     }
 }
 
