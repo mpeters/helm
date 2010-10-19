@@ -8,6 +8,12 @@ use Config::ApacheFormat;
 use Helm::Conf;
 use Helm::Server;
 
+BEGIN {
+    eval { require Config::ApacheFormat };
+    die "Could not load Config::ApacheFormat. It must be installed to use Helm's irc logging"
+      if $@;
+}
+
 extends 'Helm::Conf::Loader';
 
 sub load {
