@@ -187,8 +187,16 @@ my (%extra_options, @extra_args);
 for(my $i=0; $i<=$#ARGV; $i++) {
     my $option = $ARGV[$i];
     if( $option =~ /^-+(.*)/ ) {
-        $option = $1;
-        my $val = $ARGV[$i+1];
+        my $val;
+        if( $option =~ /^-+(.*)=(.*)/ ) {
+            # --command=id
+            $option = $1;
+            $val = $2;
+        } else {
+            # --command id
+            $option = $1;
+            $val = $ARGV[$i+1];
+        }
         if( ! defined $val || $val =~ /^-/ ) {
             $extra_options{$option} = 1;
         } else {
