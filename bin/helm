@@ -93,7 +93,7 @@ my (
 );
 
 # the main task (make sure not to grab an option by mistake)
-my $task = defined $ARGV[0] && $ARGV[0] !~ /^-/ ? shift @ARGV : undef;
+my $task = defined $ARGV[0] && $ARGV[0] !~ /^-/ ? shift @ARGV : '';
 
 # load the .helmrc file unless we have the --no-rc-file set
 unless (grep { $_ eq '--no-rc-file' } @ARGV) {
