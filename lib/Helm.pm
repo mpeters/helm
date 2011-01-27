@@ -26,21 +26,22 @@ our $DEBUG_LOG_PID;
 enum LOG_LEVEL => qw(debug info warn error);
 enum LOCK_TYPE => qw(none local remote both);
 
-has task           => (is => 'ro', writer => '_task',           required => 1);
-has config_uri     => (is => 'ro', writer => '_config_uri',     isa      => 'Str');
-has config         => (is => 'ro', writer => '_config',         isa      => 'Helm::Conf');
-has lock_type      => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
-has sleep          => (is => 'ro', writer => '_sleep',          isa      => 'Num');
-has current_server => (is => 'ro', writer => '_current_server', isa      => 'Helm::Server');
-has current_ssh    => (is => 'ro', writer => '_current_ssh',    isa      => 'Net::OpenSSH');
-has log            => (is => 'ro', writer => '_log',            isa      => 'Helm::Log');
-has default_port   => (is => 'ro', writer => '_port',           isa      => 'Int');
-has timeout        => (is => 'ro', writer => '_timeout',        isa      => 'Int');
-has sudo           => (is => 'rw', isa    => 'Str',             default  => '');
-has extra_options  => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
-has extra_args     => (is => 'ro', isa    => 'ArrayRef',        default  => sub { [] });
-has parallel       => (is => 'ro', isa    => 'Bool|Undef',      default  => 0);
-has parallel_max   => (is => 'ro', isa    => 'Int|Undef',       default  => 100);
+has task                 => (is => 'ro', writer => '_task',           required => 1);
+has config_uri           => (is => 'ro', writer => '_config_uri',     isa      => 'Str');
+has config               => (is => 'ro', writer => '_config',         isa      => 'Helm::Conf');
+has lock_type            => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
+has sleep                => (is => 'ro', writer => '_sleep',          isa      => 'Num');
+has current_server       => (is => 'ro', writer => '_current_server', isa      => 'Helm::Server');
+has current_ssh          => (is => 'ro', writer => '_current_ssh',    isa      => 'Net::OpenSSH');
+has log                  => (is => 'ro', writer => '_log',            isa      => 'Helm::Log');
+has default_port         => (is => 'ro', writer => '_port',           isa      => 'Int');
+has timeout              => (is => 'ro', writer => '_timeout',        isa      => 'Int');
+has sudo                 => (is => 'rw', isa    => 'Str',             default  => '');
+has extra_options        => (is => 'ro', isa    => 'HashRef',         default  => sub { {} });
+has extra_args           => (is => 'ro', isa    => 'ArrayRef',        default  => sub { [] });
+has parallel             => (is => 'ro', isa    => 'Bool|Undef',      default  => 0);
+has parallel_max         => (is => 'ro', isa    => 'Int|Undef',       default  => 100);
+has continue_with_errors => (is => 'ro', isa    => 'Bool|Undef',      default  => 0);
 has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa => 'FileHandle|Undef');
 has servers    => (
     is      => 'ro',
@@ -71,6 +72,11 @@ has log_level => (
     writer  => '_log_level',
     isa     => 'LOG_LEVEL',
     default => 'info',
+);
+has _dont_exit => (
+    is      => 'rw',
+    isa     => 'Bool|Undef',
+    default => 0
 );
 
 my %REGISTERED_MODULES = (
@@ -264,6 +270,7 @@ sub steer {
     }
 
     # execute the task for each server
+    $self->_dont_exit(1) if $self->continue_with_errors;
     foreach my $server (@servers) {
         $self->log->start_server($server);
         $self->_current_server($server);
@@ -502,7 +509,8 @@ sub die {
         $self->_release_remote_lock($self->current_ssh);
         $self->_release_local_lock();
     }
-    exit(1);
+
+    exit(1) unless $self->_dont_exit;
 }
 
 sub register_module {

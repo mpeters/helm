@@ -89,7 +89,7 @@ my (
     @servers,  @exclude_servers, @roles,   @exclude_roles, $config_uri,
     @logs,     $log_level,       @libs,    $no_rc_file,    $quiet,
     $man,      $help,            $version, $dump_config,   $debug,
-    $parallel, $max_parallel,
+    $parallel, $max_parallel,    $continue_with_errors,
 );
 
 # the main task (make sure not to grab an option by mistake)
@@ -129,6 +129,7 @@ GetOptions(
     'sleep=i'                                         => \$sleep,
     'port=i'                                          => \$port,
     'timeout=i'                                       => \$timeout,
+    'continue-with-errors'                            => \$continue_with_errors,
     'no-rc-file'                                      => \$no_rc_file,
     'quiet'                                           => \$quiet,
     'man'                                             => \$man,
@@ -208,21 +209,22 @@ try {
     $helm = Helm->new(
         task       => $task       || '',
         config_uri => $config_uri || '',
-        extra_options   => \%extra_options,
-        extra_args      => \@extra_args,
-        servers         => \@servers,
-        roles           => \@roles,
-        exclude_servers => \@exclude_servers,
-        exclude_roles   => \@exclude_roles,
-        log             => \@logs,
-        log_level       => $log_level,
-        sudo            => $sudo,
-        lock_type       => $lock_type,
-        sleep           => $sleep,
-        default_port    => $port,
-        timeout         => $timeout,
-        parallel        => $parallel,
-        max_parallel    => $max_parallel,
+        extra_options        => \%extra_options,
+        extra_args           => \@extra_args,
+        servers              => \@servers,
+        roles                => \@roles,
+        exclude_servers      => \@exclude_servers,
+        exclude_roles        => \@exclude_roles,
+        log                  => \@logs,
+        log_level            => $log_level,
+        sudo                 => $sudo,
+        lock_type            => $lock_type,
+        sleep                => $sleep,
+        default_port         => $port,
+        timeout              => $timeout,
+        parallel             => $parallel,
+        max_parallel         => $max_parallel,
+        continue_with_errors => $continue_with_errors,
     );
 } catch {
     # TODO - we can do this better than just filtering the error messages
@@ -432,6 +434,13 @@ The port to use for SSH on all of the remote servers. Defaults to the standard (
 =item --timeout
 
 The timeout in seconds to give the ssh connections. Default is 30 seconds.
+
+=item --continue-with-errors
+
+If a command fails executing against this will normally cause execution
+to halt and not run against any other remote servers. Using this option
+will tell helm to continue on to the server(s) even if a previous one
+has errors.
 
 =item --quiet
 
