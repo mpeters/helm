@@ -193,7 +193,7 @@ sub BUILD {
     if( @roles ) {
         $self->die("Can't specify roles without a config") if !$self->config;
         my @servers = @{$self->servers};
-        push(@servers, $self->config->get_servers_by_roles(\@roles, \@exclude_roles));
+        push(@servers,  grep { !$excludes{$_->name} } $self->config->get_servers_by_roles(\@roles, \@exclude_roles));
         if(!@servers) {
             if( @exclude_roles ) {
                 $self->die("No servers with roles ("

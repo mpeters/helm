@@ -27,7 +27,7 @@ Put a local file onto the remote server(s). Takes the following required
 options:
 
   --local
-      The name of the patch file on the local machine.
+      The name of the file on the local machine.
 
   --remote
       The full path that the file will occupy on the remote server(s).
