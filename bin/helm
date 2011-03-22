@@ -474,6 +474,10 @@ This is different than the C<--log-level> since that is mainly for end user
 logging of individual task actions. This flag is meant to debug the internals
 of helm, including the logging subsystem, which is why it's a separate flag.
 
+=item --sleep
+
+Sleep a given number of seconds in between each server.
+
 =back
 
 =cut
