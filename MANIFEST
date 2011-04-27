@@ -1,5 +1,6 @@
 bin/helm
 Build.PL
+Changes
 lib/Helm.pm
 lib/Helm/Conf.pm
 lib/Helm/Conf/Loader.pm
@@ -18,8 +19,8 @@ lib/Helm/Task/patch.pm
 lib/Helm/Task/put.pm
 lib/Helm/Task/rsync_put.pm
 lib/Helm/Task/run.pm
+Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
-README
-Makefile.PL
 META.yml
+README
