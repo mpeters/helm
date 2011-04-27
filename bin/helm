@@ -484,6 +484,38 @@ Sleep a given number of seconds in between each server.
 
 =head1 TASKS
 
+Helm comes with the following built-in tasks
+
+To get more information on how to run each task, simply
+use C<helm help>:
+
+    helm help run
+
+=head2 run
+
+This is the simplest of helm commands and will run some arbitrary command
+on the remote server.
+
+=head2 get
+
+Get a file from a remote server and put it on the local machine.
+
+=head2 put
+
+Put a local file onto a remote server.
+
+=head2 rsync_put
+
+Put a local file onto a remote server using C<rsync> rather than a full copy.
+
+=head2 patch
+
+Patch a file on a remote server with a patch on the local machine.
+
+=head2 clear_remote_lock
+
+Clear out any stuck Helm locks on a remote server.
+
 =head1 CONFIGURATION
 
 By default, C<helm> doesn't use a configuration file, but certain features
