@@ -548,6 +548,9 @@ This is basically a log file where messages are immediately appended.
 
 =item irc://
 
+B<NOTE>: IRC logging is still experimental and quite
+tempermental. Improvements are welcome.
+
 This is an IRC channel where messages are immediately sent. For example
 to send messages to the C<sysadmin> IRC channel on C<irc.company.com>
 using the user C<michael> and the password C<s3cr3t> you would have:
