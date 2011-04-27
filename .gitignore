@@ -3,7 +3,7 @@
 *.swo
 *.swp
 Build
-Helm-*
+helm-*
 _build
 blib
 .helmrc
