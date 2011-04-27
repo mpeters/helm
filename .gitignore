@@ -10,3 +10,4 @@ helm.log
 .helmrc
 helm.conf
 z-backup
+MYMETA.yml
