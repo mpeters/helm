@@ -13,12 +13,12 @@ lib/Helm/Log/Channel/file.pm
 lib/Helm/Log/Channel/irc.pm
 lib/Helm/Server.pm
 lib/Helm/Task.pm
-lib/Helm/Task/clear_remote_lock.pm
 lib/Helm/Task/get.pm
 lib/Helm/Task/patch.pm
 lib/Helm/Task/put.pm
 lib/Helm/Task/rsync_put.pm
 lib/Helm/Task/run.pm
+lib/Helm/Task/unlock.pm
 Makefile.PL
 MANIFEST			This list of files
 MANIFEST.SKIP
