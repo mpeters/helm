@@ -1,0 +1,80 @@
+---
+abstract: 'helm - Easy server and cluster automation'
+author: []
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3607'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Helm
+provides:
+  Helm:
+    file: lib/Helm.pm
+    version: 0.1
+  Helm::Conf:
+    file: lib/Helm/Conf.pm
+  Helm::Conf::Loader:
+    file: lib/Helm/Conf/Loader.pm
+  Helm::Conf::Loader::helm:
+    file: lib/Helm/Conf/Loader/helm.pm
+  Helm::Log:
+    file: lib/Helm/Log.pm
+  Helm::Log::Channel:
+    file: lib/Helm/Log/Channel.pm
+  Helm::Log::Channel::console:
+    file: lib/Helm/Log/Channel/console.pm
+  Helm::Log::Channel::email:
+    file: lib/Helm/Log/Channel/email.pm
+  Helm::Log::Channel::file:
+    file: lib/Helm/Log/Channel/file.pm
+  Helm::Log::Channel::irc:
+    file: lib/Helm/Log/Channel/irc.pm
+  Helm::Server:
+    file: lib/Helm/Server.pm
+  Helm::Task:
+    file: lib/Helm/Task.pm
+  Helm::Task::clear_remote_lock:
+    file: lib/Helm/Task/clear_remote_lock.pm
+  Helm::Task::get:
+    file: lib/Helm/Task/get.pm
+  Helm::Task::patch:
+    file: lib/Helm/Task/patch.pm
+  Helm::Task::put:
+    file: lib/Helm/Task/put.pm
+  Helm::Task::rsync_put:
+    file: lib/Helm/Task/rsync_put.pm
+  Helm::Task::run:
+    file: lib/Helm/Task/run.pm
+recommends:
+  AnyEvent::IRC::Client: 0.95
+  Email::Sender: 0.102370
+  Email::Simple: 2.100
+  Email::Simple::Creator: 1.424
+  Email::Valid: 0.184
+requires:
+  AnyEvent: 5.271
+  Carp: 0
+  Config::ApacheFormat: 1.2
+  Cwd: 3.33
+  Data::UUID: 1.217
+  DateTime: 0.63
+  Fcntl: 0
+  File::Basename: 2.78
+  File::HomeDir: 0.93
+  File::Spec::Functions: 3.33
+  Getopt::Long: 2.38
+  IO::File: 1.14
+  IO::Pipe: 1.13
+  Moose: 1.14
+  Net::OpenSSH: 0.49
+  Parallel::ForkManager: v0.7.7
+  Pod::Usage: 1.38
+  Term::ANSIColor: 3.00
+  Try::Tiny: 0.06
+  URI: 1.55
+  perl: 5.8
+resources:
+  license: http://dev.perl.org/licenses/
+version: 0.1
