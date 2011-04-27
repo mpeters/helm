@@ -1,6 +1,7 @@
 ---
 abstract: 'helm - Easy server and cluster automation'
-author: []
+author:
+  - 'Michael Peters <wonko@cpan.org>'
 configure_requires:
   Module::Build: 0.36
 generated_by: 'Module::Build version 0.3623'
@@ -8,7 +9,7 @@ license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4
-name: Helm
+name: helm
 provides:
   Helm:
     file: lib/Helm.pm
@@ -77,4 +78,4 @@ requires:
   perl: v5.8.0
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.1
+version: 0.2

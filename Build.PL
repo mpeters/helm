@@ -1,10 +1,14 @@
 use Module::Build;
 use Data::Dumper;
 my $build = Module::Build->new(
-    dist_abstract => 'helm - Easy server and cluster automation',
-    module_name   => 'Helm',
-    license       => 'perl',
-    requires      => {
+    dist_abstract      => 'helm - Easy server and cluster automation',
+    dist_author        => 'Michael Peters <wonko@cpan.org>',
+    dist_name          => 'helm',
+    dist_version_from  => 'bin/helm',
+    license            => 'perl',
+    create_makefile_pl => 'small',
+    create_readme      => 1,
+    requires           => {
         'perl'                  => '5.8.0',
         'Moose'                 => '1.14',
         'Getopt::Long'          => '2.38',
@@ -32,8 +36,7 @@ my $build = Module::Build->new(
         'Email::Sender'          => '0.102370',
         'Email::Valid'           => '0.184',
         'AnyEvent::IRC::Client'  => '',
-        'Config::ApacheFormat'  => '1.2',
+        'Config::ApacheFormat'   => '1.2',
     },
-    create_makefile_pl => 'small',
 );
 $build->create_build_script;
