@@ -1,4 +1,4 @@
-package Helm::Task::clear_remote_lock;
+package Helm::Task::unlock;
 use strict;
 use warnings;
 use Moose;
@@ -20,7 +20,7 @@ CAUTION: Make sure that the lock is really an artefact of a previous
 run and not something currently being run by someone else or bad things
 could happen.
 
-    helm clear_remote_lock
+    helm unlock
 END
 }
 

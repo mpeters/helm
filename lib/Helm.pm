@@ -81,12 +81,12 @@ has _dont_exit => (
 
 my %REGISTERED_MODULES = (
     task => {
-        get               => 'Helm::Task::get',
-        patch             => 'Helm::Task::patch',
-        put               => 'Helm::Task::put',
-        rsync_put         => 'Helm::Task::rsync_put',
-        run               => 'Helm::Task::run',
-        clear_remote_lock => 'Helm::Task::clear_remote_lock',
+        get       => 'Helm::Task::get',
+        patch     => 'Helm::Task::patch',
+        put       => 'Helm::Task::put',
+        rsync_put => 'Helm::Task::rsync_put',
+        run       => 'Helm::Task::run',
+        unlock    => 'Helm::Task::unlock',
     },
     log => {
         console => 'Helm::Log::Channel::console',

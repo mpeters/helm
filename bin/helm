@@ -512,7 +512,7 @@ Put a local file onto a remote server using C<rsync> rather than a full copy.
 
 Patch a file on a remote server with a patch on the local machine.
 
-=head2 clear_remote_lock
+=head2 unlock
 
 Clear out any stuck Helm locks on a remote server.
 
