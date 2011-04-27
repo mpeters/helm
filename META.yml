@@ -35,8 +35,6 @@ provides:
     file: lib/Helm/Server.pm
   Helm::Task:
     file: lib/Helm/Task.pm
-  Helm::Task::clear_remote_lock:
-    file: lib/Helm/Task/clear_remote_lock.pm
   Helm::Task::get:
     file: lib/Helm/Task/get.pm
   Helm::Task::patch:
@@ -47,6 +45,8 @@ provides:
     file: lib/Helm/Task/rsync_put.pm
   Helm::Task::run:
     file: lib/Helm/Task/run.pm
+  Helm::Task::unlock:
+    file: lib/Helm/Task/unlock.pm
 recommends:
   AnyEvent::IRC::Client: ''
   Config::ApacheFormat: 1.2
