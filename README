@@ -181,6 +181,12 @@ OPTIONS
         The timeout in seconds to give the ssh connections. Default is 30
         seconds.
 
+    --continue-with-errors
+        If a command fails executing against this will normally cause
+        execution to halt and not run against any other remote servers.
+        Using this option will tell helm to continue on to the server(s)
+        even if a previous one has errors.
+
     --quiet
         Suppress the default logging to "STDERR"
 
@@ -201,7 +207,36 @@ OPTIONS
         meant to debug the internals of helm, including the logging
         subsystem, which is why it's a separate flag.
 
+    --sleep
+        Sleep a given number of seconds in between each server.
+
 TASKS
+    Helm comes with the following built-in tasks
+
+    To get more information on how to run each task, simply use "helm help":
+
+        helm help run
+
+  run
+    This is the simplest of helm commands and will run some arbitrary
+    command on the remote server.
+
+  get
+    Get a file from a remote server and put it on the local machine.
+
+  put
+    Put a local file onto a remote server.
+
+  rsync_put
+    Put a local file onto a remote server using "rsync" rather than a full
+    copy.
+
+  patch
+    Patch a file on a remote server with a patch on the local machine.
+
+  unlock
+    Clear out any stuck Helm locks on a remote server.
+
 CONFIGURATION
     By default, "helm" doesn't use a configuration file, but certain
     features require it (using roles, server abbreviations, etc) so it's
@@ -261,6 +296,9 @@ LOG CHANNELS
             --log file:///var/log/helm.log
 
     irc://
+        NOTE: IRC logging is still experimental and quite tempermental.
+        Improvements are welcome.
+
         This is an IRC channel where messages are immediately sent. For
         example to send messages to the "sysadmin" IRC channel on
         "irc.company.com" using the user "michael" and the password "s3cr3t"
