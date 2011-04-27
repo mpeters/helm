@@ -8,3 +8,5 @@ blib
 \.svn
 \.helmrc
 ^MYMETA.yml$
+\.conf$
+\.log$
