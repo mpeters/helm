@@ -10,7 +10,8 @@ use Helm::Server;
 
 BEGIN {
     eval { require Config::ApacheFormat };
-    die "Could not load Config::ApacheFormat. It must be installed to use Helm's irc logging"
+    die "Could not load Config::ApacheFormat. "
+      . "It must be installed to use Helm's built-in configuration format: $@"
       if $@;
 }
 
