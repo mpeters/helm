@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use Moose;
 use Net::OpenSSH;
-use Data::UUID;
 
 extends 'Helm::Task';
 
