@@ -232,7 +232,9 @@ sub steer {
     eval "require $task_class";
 
     if( $@ ) {
-        if( $@ =~ /Can't locate \S+.pm/ ) {
+        my $task_class_file = $task_class;
+        $task_class_file =~ s/::/\//g;
+        if( $@ =~ /Can't locate \Q$task_class_file\E\.pm/ ) {
             $self->die("Can not find module $task_class for task $task");
         } else {
             $self->die("Could not load module $task_class for task $task");
@@ -365,7 +367,9 @@ sub load_configuration {
     eval "require $loader_class";
 
     if( $@ ) {
-        if( $@ =~ /Can't locate \S+.pm/ ) {
+        my $loader_class_file = $loader_class;
+        $loader_class_file =~ s/::/\//g;
+        if( $@ =~ /Can't locate \Q$loader_class_file\E\.pm/ ) {
             $self->die("Can not find module $loader_class for configuration type $scheme");
         } else {
             $self->die("Could not load module $loader_class for configuration type $scheme: $@");
