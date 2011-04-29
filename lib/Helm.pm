@@ -27,6 +27,7 @@ enum LOG_LEVEL => qw(debug info warn error);
 enum LOCK_TYPE => qw(none local remote both);
 
 has task                 => (is => 'ro', writer => '_task',           required => 1);
+has user                 => (is => 'ro', writer => '_user',           isa      => 'Maybe[Str]');
 has config_uri           => (is => 'ro', writer => '_config_uri',     isa      => 'Maybe[Str]');
 has config               => (is => 'ro', writer => '_config',         isa      => 'Helm::Conf');
 has lock_type            => (is => 'ro', writer => '_lock_type',      isa      => 'LOCK_TYPE');
@@ -36,12 +37,12 @@ has current_ssh          => (is => 'ro', writer => '_current_ssh',    isa      =
 has log                  => (is => 'ro', writer => '_log',            isa      => 'Helm::Log');
 has default_port         => (is => 'ro', writer => '_port',           isa      => 'Maybe[Int]');
 has timeout              => (is => 'ro', writer => '_timeout',        isa      => 'Maybe[Int]');
-has sudo                 => (is => 'rw', isa    => 'Maybe[Str]',             default  => '');
-has extra_options        => (is => 'ro', isa    => 'Maybe[HashRef]',         default  => sub { {} });
-has extra_args           => (is => 'ro', isa    => 'Maybe[ArrayRef]',        default  => sub { [] });
-has parallel             => (is => 'ro', isa    => 'Maybe[Bool]',      default  => 0);
-has parallel_max         => (is => 'ro', isa    => 'Maybe[Int]',       default  => 100);
-has continue_with_errors => (is => 'ro', isa    => 'Maybe[Bool]',      default  => 0);
+has sudo                 => (is => 'rw', isa    => 'Maybe[Str]',      default  => '');
+has extra_options        => (is => 'ro', isa    => 'Maybe[HashRef]',  default  => sub { {} });
+has extra_args           => (is => 'ro', isa    => 'Maybe[ArrayRef]', default  => sub { [] });
+has parallel             => (is => 'ro', isa    => 'Maybe[Bool]',     default  => 0);
+has parallel_max         => (is => 'ro', isa    => 'Maybe[Int]',      default  => 100);
+has continue_with_errors => (is => 'ro', isa    => 'Maybe[Bool]',     default  => 0);
 has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa => 'Maybe[FileHandle]');
 has servers    => (
     is      => 'ro',
@@ -307,8 +308,13 @@ sub steer {
             }
         }
 
-        my $ssh = Net::OpenSSH->new($server->name, %ssh_args);
-        $ssh->error && $self->die("Can't ssh to $server: " . $ssh->error);
+        my $connection_name = $server->name;
+        my $user = $self->user;
+        $connection_name = $user . '@' . $connection_name if $user;
+
+        my $ssh = Net::OpenSSH->new($connection_name, %ssh_args);
+        $ssh->error
+          && $self->die("Can't ssh to $server" . ($user ? " as user $user" : '') . ": " . $ssh->error);
         $self->_current_ssh($ssh);
 
         # get a lock on the server if we need to

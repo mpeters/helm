@@ -91,7 +91,7 @@ my (
     @servers,  @exclude_servers, @roles,   @exclude_roles, $config_uri,
     @logs,     $log_level,       @libs,    $no_rc_file,    $quiet,
     $man,      $help,            $version, $dump_config,   $debug,
-    $parallel, $max_parallel,    $continue_with_errors,
+    $parallel, $max_parallel,    $continue_with_errors,    $user,
 );
 
 # the main task (make sure not to grab an option by mistake)
@@ -116,6 +116,7 @@ unless (grep { $_ eq '--no-rc-file' } @ARGV) {
 
 Getopt::Long::Configure('pass_through');
 GetOptions(
+    'user|u=s'                                        => \$user,
     'servers|server=s'                                => \@servers,
     'exclude|exclude_servers|exclude-servers=s'       => \@exclude_servers,
     'roles|role=s'                                    => \@roles,
@@ -217,8 +218,9 @@ my $helm;
 unshift(@logs, 'console') unless $quiet;
 try {
     $helm = Helm->new(
-        task       => $task       || '',
-        config_uri => $config_uri || '',
+        user                 => $user,
+        task                 => $task,
+        config_uri           => $config_uri,
         extra_options        => \%extra_options,
         extra_args           => \@extra_args,
         servers              => \@servers,
@@ -303,6 +305,14 @@ remaining arguments are passed to the task that was invoked. These global
 options are:
 
 =over
+
+=item --user
+
+By default, helm assumes you're running the comands as the current local.
+This works really well with SSH keys set up so that you don't have to
+try and type in your password on lots of login attempts. However, if you
+want to change the user, this option allows for that. You will however
+be prompted for a password if you don't have SSH keys properly set up.
 
 =item --servers
 

@@ -1,8 +1,11 @@
 Revision history for Helm
 
 0.3 (April 29, 2011)
-    + Fixed GitHub issue #4 that incorrectly identified a failure to load a config dependency
-      as a failure to load the config module itself [xsawyerx and M. Petersr]
+    + Added a new --user option so you can switch the user (Github issue
+      #5) [xsawyerx and M. Peters]
+    + Fixed GitHub issue #4 that incorrectly identified a failure to
+      load a config dependency as a failure to load the config module
+      itself [xsawyerx and M. Peters]
 
 0.2 (April 27, 2011)
     + packaging change: release is "helm" not "Helm" so that all info is pulled from the command script
