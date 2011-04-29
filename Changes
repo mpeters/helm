@@ -1,6 +1,9 @@
 Revision history for Helm
 
 0.3 (April 29, 2011)
+    + Added new param() and params() methods to Helm::Task so subclasses
+      can pass information between validate(), setup(), execute() and
+      teardown() phases [M. Peters]
     + Added a new --user option so you can switch the user (Github issue
       #5) [xsawyerx and M. Peters]
     + Fixed GitHub issue #4 that incorrectly identified a failure to

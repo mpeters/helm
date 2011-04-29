@@ -36,6 +36,26 @@ sub unique_tmp_file {
     return $file;
 }
 
+sub param {
+    my $self = shift;
+    my $name = shift;
+    $self->{__params} ||= {};
+    my $params = $self->{__params};
+
+    # set it if we have a value
+    $params->{$name} = $_[0] if @_;
+    return $params->{$name};
+}
+
+sub params {
+    my $self = shift;
+    if( $self->{__params} ) {
+        return %{$self->{__params}};
+    } else {
+        return ();
+    }
+}
+
 __PACKAGE__->meta->make_immutable;
 
 1;
