@@ -9,5 +9,7 @@ blib
 .helmrc
 z-backup
 MYMETA.yml
+META.yml
+README
 *.conf
 *.log
