@@ -7,6 +7,7 @@ use Helm;
 use Try::Tiny;
 use Cwd qw(abs_path);
 use File::Spec::Functions qw(catfile);
+use File::HomeDir;
 
 our $VERSION = "0.2";
 
@@ -100,9 +101,15 @@ my $task = defined $ARGV[0] && $ARGV[0] !~ /^-/ ? shift @ARGV : '';
 # load the .helmrc file unless we have the --no-rc-file set
 unless (grep { $_ eq '--no-rc-file' } @ARGV) {
     my $file = $ENV{HELMRC};
-    # look in the current directory
+    # look for ./.helmrc
     unless ($file && -e $file) {
         $file = catfile(abs_path, '.helmrc');
+        undef $file unless -e $file;
+    }
+
+    # no .helmrc in the current directory, so let's checkt ~/.helmrc
+    if (!$file) {
+        $file = catfile(File::HomeDir->my_home, '.helmrc');
         undef $file unless -e $file;
     }
 
@@ -629,8 +636,8 @@ might look like this:
     --load Helm::Log::CompanyYammer
     --load Company::CustomHelmTasks
 
-C<helm> looks in your home directory or the current directory for
-the F<.helmrc>. You can specify another location with the C<HELMRC>
+C<helm> looks for the rc file first in the current directory and then in
+your home directory. You can specify another location with the C<HELMRC>
 environment variable.
 
 If L<--no-rc-file> is specified on the command line, the F<.helmrc> file
