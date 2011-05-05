@@ -18,7 +18,7 @@ use Parallel::ForkManager;
 use DateTime;
 use IO::File;
 
-our $VERSION = 0.1;
+our $VERSION = 0.3;
 our $DEBUG = 0;
 our $DEBUG_LOG;
 our $DEBUG_LOG_PID;
