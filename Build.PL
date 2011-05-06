@@ -29,6 +29,7 @@ my $build = Module::Build->new(
           'IO::Pipe'              => '0',
           'IO::File'              => '0',
           'AnyEvent'              => '0',
+          'namespace::autoclean'  => '0',
     },
     recommends => {
         'AnyEvent::IRC::Client'  => '0',
