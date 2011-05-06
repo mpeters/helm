@@ -1,5 +1,9 @@
 Revision history for Helm
 
+0.4 (in development)
+    + Added missing namespace::autoclean to the dependencies in Build.PL
+      [M. Peters]
+
 0.3 (May 5, 2011)
     + Added new param() and params() methods to Helm::Task so subclasses
       can pass information between validate(), setup(), execute() and
