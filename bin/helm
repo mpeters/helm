@@ -188,9 +188,13 @@ if( $debug ) {
 # look through @ARGV to save any extra junk for task specific
 # things. Process according to these rules:
 # 1) If we see something that starts with a '--' then assume it's a named
-#   option. If the next thing also starts with a '--' then assume that
-#   the value of this option is "1". Else assume the next thing is it's value.
-#   Stored named options and their values in %extra_options.
+#   option. 
+#   a) If it's a "--.*=.*" then assume it's a name-value pair together joined
+#      with an equals sign.
+#   b) Else if the next thing also starts with a '--' then assume that
+#      the value of this option is "1". 
+#   c) Else assume the next thing is it's value.
+#      Stored named options and their values in %extra_options.
 # 2) If we see something that doesn't start with a '--' and isn't preceded
 #   by something with a '--' then assume it's a positional argument. Store
 #   positional arguments in @extra_args.
@@ -200,21 +204,41 @@ for(my $i=0; $i<=$#ARGV; $i++) {
     if( $option =~ /^-+(.*)/ ) {
         my $val;
         if( $option =~ /^-+(.*)=(.*)/ ) {
-            # --command=id
+            # --option=value
             $option = $1;
             $val = $2;
         } else {
-            # --command id
+            # --option value
             $option = $1;
             $val = $ARGV[$i+1];
         }
+
+        # is it "--option value" or just boolean "--option"
         if( ! defined $val || $val =~ /^-/ ) {
-            $extra_options{$option} = 1;
+            $val = 1;
         } else {
-            $extra_options{$option} = $val;
             $i++;
         }
+
+        # strip off quotes
+        if( $val =~ /^'(.*)'$/ ) {
+            $val = $1;
+        } elsif( $val =~ /^"(.*)"$/ ) {
+            $val = $1;
+        } elsif( $val =~ /^`(.*)`$/ ) {
+            $val = $1;
+        }
+
+        $extra_options{$option} = $val;
     } else {
+        # strip off quotes
+        if( $option =~ /^'(.*)'$/ ) {
+            $option = $1;
+        } elsif( $option =~ /^"(.*)"$/ ) {
+            $option = $1;
+        } elsif( $option =~ /^`(.*)`$/ ) {
+            $option = $1;
+        }
         push(@extra_args, $option);
     }
 }
