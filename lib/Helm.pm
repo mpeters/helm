@@ -43,8 +43,18 @@ has extra_args           => (is => 'ro', isa    => 'Maybe[ArrayRef]', default  =
 has parallel             => (is => 'ro', isa    => 'Maybe[Bool]',     default  => 0);
 has parallel_max         => (is => 'ro', isa    => 'Maybe[Int]',      default  => 100);
 has continue_with_errors => (is => 'ro', isa    => 'Maybe[Bool]',     default  => 0);
-has local_lock_handle => (is => 'ro', writer => '_local_lock_handle', isa => 'Maybe[FileHandle]');
-has servers    => (
+has all_configured_servers => (
+    is      => 'ro',
+    writer  => '_all_configured_servers',
+    isa     => 'Maybe[Bool]',
+    default => 0,
+);
+has local_lock_handle => (
+    is     => 'ro',
+    writer => '_local_lock_handle',
+    isa    => 'Maybe[FileHandle]',
+);
+has servers => (
     is      => 'ro',
     writer  => '_servers',
     isa     => 'Maybe[ArrayRef]',
@@ -56,7 +66,7 @@ has roles => (
     isa     => 'ArrayRef[Str]',
     default => sub { [] },
 );
-has exclude_servers    => (
+has exclude_servers => (
     is      => 'ro',
     writer  => '_exclude_servers',
     isa     => 'Maybe[ArrayRef]',
@@ -218,6 +228,11 @@ sub BUILD {
         @servers =
           grep { !@exclude_roles || !$_->has_role(@exclude_roles) }
           grep { !$excludes{$_->name} } @{$self->config->servers};
+
+        # are we operating on all the servers?
+        if(!@exclude_roles && !%excludes ) {
+            $self->_all_configured_servers(1);
+        }
         
         $self->_servers(\@servers);
     }
