@@ -39,6 +39,7 @@ sub unique_tmp_file {
 sub param {
     my $self = shift;
     my $name = shift;
+    die "param() requires a name" unless $name;
     $self->{__params} ||= {};
     my $params = $self->{__params};
 
