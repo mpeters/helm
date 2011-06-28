@@ -9,7 +9,7 @@ use Cwd qw(abs_path);
 use File::Spec::Functions qw(catfile);
 use File::HomeDir;
 
-our $VERSION = "0.3";
+our $VERSION = "0.4";
 
 =head1 NAME
 
