@@ -9,6 +9,7 @@ helm-*
 *.log
 META.yml
 MYMETA.yml
+MYMETA.json
 README
 *.swo
 *.swp
