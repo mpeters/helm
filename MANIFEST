@@ -25,3 +25,4 @@ MANIFEST.SKIP
 META.yml
 README
 t/01-load.t
+META.json
