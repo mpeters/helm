@@ -25,7 +25,7 @@ helm - Easy server and cluster automation
     helm patch --file my_fix.patch --target /opt/cool_system/do_stuff.pl
 
     # run a command on only the servers which run memcache
-    helm run --command "pidof memcached" --roles memcache 
+    helm run "pidof memcached" --roles memcache 
 
     # copy a file to every server in your cluster
     helm put --local foo.tar.gz --remote /tmp/bar.tar.gz
