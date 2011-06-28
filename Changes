@@ -1,6 +1,6 @@
 Revision history for Helm
 
-0.4 (in development)
+0.4 (June 28, 2011)
     + Added missing namespace::autoclean to the dependencies in Build.PL
       [M. Peters]
 
