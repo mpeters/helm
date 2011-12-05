@@ -417,6 +417,16 @@ sub known_tasks {
     return sort keys %{$REGISTERED_MODULES{task}};
 }
 
+sub first_server_by_role {
+    my ($self, $role) = @_;
+    foreach my $server (@{$self->servers}) {
+        if( $server->has_role($role) ) {
+            return $server;
+        }
+    }
+    return;
+}
+
 sub _get_local_lock {
     my $self = shift;
     $self->log->debug("Trying to acquire global local helm lock");
